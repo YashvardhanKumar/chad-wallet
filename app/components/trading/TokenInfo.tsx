@@ -148,6 +148,7 @@ export default function TokenInfo({ token }: { token: Token }) {
   useEffect(() => {
     if (!chartContainerRef.current) return;
 
+    const isMobile = window.innerWidth < 1024;
     const chart = createChart(chartContainerRef.current, {
       layout: {
         background: { type: ColorType.Solid, color: 'transparent' },
@@ -158,7 +159,7 @@ export default function TokenInfo({ token }: { token: Token }) {
         horzLines: { color: 'rgba(255, 255, 255, 0.05)' },
       },
       width: chartContainerRef.current.clientWidth,
-      height: 300,
+      height: isMobile ? 200 : 300,
       timeScale: {
         timeVisible: true,
         secondsVisible: false,
@@ -181,7 +182,8 @@ export default function TokenInfo({ token }: { token: Token }) {
 
     const handleResize = () => {
       if (chartContainerRef.current) {
-        chart.applyOptions({ width: chartContainerRef.current.clientWidth });
+        const mobile = window.innerWidth < 1024;
+        chart.applyOptions({ width: chartContainerRef.current.clientWidth, height: mobile ? 200 : 300 });
       }
     };
     window.addEventListener('resize', handleResize);
@@ -282,67 +284,67 @@ export default function TokenInfo({ token }: { token: Token }) {
 
   // No static mock data!
   return (
-    <div className="h-full flex flex-col">
+    <div className="lg:h-full flex flex-col">
       {/* Token Header Info */}
-      <div className="px-6 py-4 border-b border-border/50 shrink-0">
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-4">
-            <TokenLogo token={token} size={48} />
-            <div>
+      <div className="px-3 lg:px-6 py-3 lg:py-4 border-b border-border/50 shrink-0">
+        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3">
+          <div className="flex items-center gap-3 lg:gap-4">
+            <TokenLogo token={token} size={40} />
+            <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <h1 className="text-xl font-bold tracking-tight">{token.symbol}</h1>
-                <div className="flex items-center gap-1 opacity-60">
+                <h1 className="text-base lg:text-xl font-bold tracking-tight truncate">{token.symbol}</h1>
+                <div className="hidden lg:flex items-center gap-1 opacity-60">
                   <span className="text-xs">Ξ</span>
                   <span className="text-xs">🌐</span>
                   <span className="text-xs">𝕏</span>
                 </div>
-                <span className="text-yellow-500 text-sm ml-1">★</span>
+                <span className="text-yellow-500 text-xs lg:text-sm ml-auto lg:ml-1">★</span>
               </div>
               <div className="flex items-center gap-2 mt-0.5">
-                <span className="text-xs text-text-secondary">{token.name}</span>
-                <span className="text-xs text-text-tertiary bg-surface px-1.5 py-0.5 rounded font-mono border border-border/50">
+                <span className="text-[11px] lg:text-xs text-text-secondary truncate">{token.name}</span>
+                <span className="text-[10px] lg:text-xs text-text-tertiary bg-surface px-1.5 py-0.5 rounded font-mono border border-border/50 truncate max-w-[100px] lg:max-w-none">
                   {shortenAddress(token.address)}
                 </span>
-                <span className="text-xs text-text-tertiary">📋</span>
+                <span className="text-[10px] lg:text-xs text-text-tertiary">📋</span>
               </div>
             </div>
           </div>
           
-          <div className="flex gap-8">
+          <div className="grid grid-cols-3 lg:flex lg:gap-8 gap-3 lg:gap-6">
             <div>
-              <div className="text-[11px] text-text-tertiary mb-1">Price</div>
-              <div className="font-semibold text-lg">{formatPrice(token.price)}</div>
+              <div className="text-[10px] lg:text-[11px] text-text-tertiary mb-0.5 lg:mb-1">Price</div>
+              <div className="font-semibold text-sm lg:text-lg">{formatPrice(token.price)}</div>
             </div>
             <div>
-              <div className="text-[11px] text-text-tertiary mb-1">Market cap</div>
-              <div className="font-semibold">{formatMarketCap(token.marketCap)}</div>
+              <div className="text-[10px] lg:text-[11px] text-text-tertiary mb-0.5 lg:mb-1">Mkt cap</div>
+              <div className="font-semibold text-xs lg:text-base">{formatMarketCap(token.marketCap)}</div>
             </div>
             <div>
-              <div className="text-[11px] text-text-tertiary mb-1">24H change</div>
-              <div className={`font-semibold text-sm ${token.priceChange24h >= 0 ? 'text-green' : 'text-red'}`}>
+              <div className="text-[10px] lg:text-[11px] text-text-tertiary mb-0.5 lg:mb-1">24H</div>
+              <div className={`font-semibold text-xs lg:text-sm ${token.priceChange24h >= 0 ? 'text-green' : 'text-red'}`}>
                 {token.priceChange24h >= 0 ? '▲' : '▼'} {Math.abs(token.priceChange24h).toFixed(2)}%
               </div>
             </div>
             <div>
-              <div className="text-[11px] text-text-tertiary mb-1">Vol.</div>
-              <div className="font-semibold">{formatMarketCap(token.volume24h)}</div>
+              <div className="text-[10px] lg:text-[11px] text-text-tertiary mb-0.5 lg:mb-1">Vol.</div>
+              <div className="font-semibold text-xs lg:text-sm">{formatMarketCap(token.volume24h)}</div>
             </div>
             <div>
-              <div className="text-[11px] text-text-tertiary mb-1">Liquidity</div>
-              <div className="font-semibold">{formatMarketCap(token.marketCap * 0.1)}</div>
+              <div className="text-[10px] lg:text-[11px] text-text-tertiary mb-0.5 lg:mb-1">Liq.</div>
+              <div className="font-semibold text-xs lg:text-sm">{formatMarketCap(token.marketCap * 0.1)}</div>
             </div>
             <div>
-              <div className="text-[11px] text-text-tertiary mb-1">Holders</div>
-              <div className="font-semibold">45.34K</div>
+              <div className="text-[10px] lg:text-[11px] text-text-tertiary mb-0.5 lg:mb-1">Holders</div>
+              <div className="font-semibold text-xs lg:text-sm">45.34K</div>
             </div>
           </div>
         </div>
       </div>
 
       {/* Chart Section */}
-      <div className="relative px-6 py-4 flex flex-col shrink-0">
+      <div className="relative px-3 lg:px-6 py-3 lg:py-4 flex flex-col shrink-0">
         <div className="relative">
-          <div ref={chartContainerRef} className="w-full" style={{ height: '300px' }} />
+          <div ref={chartContainerRef} className="w-full h-[200px] lg:h-[300px]" />
           {chartLoading && (
             <div className="absolute inset-0 bg-background/60 flex items-center justify-center rounded-lg">
               <div className="w-6 h-6 border-2 border-accent border-t-transparent rounded-full animate-spin" />
@@ -351,13 +353,13 @@ export default function TokenInfo({ token }: { token: Token }) {
         </div>
         
         {/* Chart Overlays / Filters */}
-        <div className="flex items-center justify-between mt-4">
-          <div className="flex items-center gap-1">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between mt-3 lg:mt-4 gap-2">
+          <div className="flex items-center gap-1 flex-wrap">
             {TIME_RANGES.map((range) => (
               <button
                 key={range}
                 onClick={() => setTimeRange(range)}
-                className={`text-[11px] px-2 py-1 rounded font-medium transition-colors ${
+                className={`text-[10px] lg:text-[11px] px-1.5 lg:px-2 py-1 rounded font-medium transition-colors ${
                   timeRange === range ? 'bg-white/10 text-white' : 'text-text-tertiary hover:text-text-secondary hover:bg-white/5'
                 }`}
               >
@@ -365,38 +367,23 @@ export default function TokenInfo({ token }: { token: Token }) {
               </button>
             ))}
           </div>
-          <div className="flex items-center gap-4 text-xs font-medium text-text-secondary">
-            <span>Chart overlays</span>
-            <label className="flex items-center gap-1.5 cursor-pointer">
-              <input 
-                type="checkbox" 
-                className="accent-accent" 
-                checked={showFriends}
-                onChange={(e) => setShowFriends(e.target.checked)}
-              /> Friends
+          <div className="flex items-center gap-2 lg:gap-4 text-[10px] lg:text-xs font-medium text-text-secondary flex-wrap">
+            <span className="hidden lg:inline">Chart overlays</span>
+            <label className="flex items-center gap-1 cursor-pointer">
+              <input type="checkbox" className="accent-accent w-3 h-3 lg:w-auto lg:h-auto" checked={showFriends} onChange={(e) => setShowFriends(e.target.checked)} /> Friends
             </label>
-            <label className="flex items-center gap-1.5 cursor-pointer text-blue-400">
-              <input 
-                type="checkbox" 
-                className="accent-blue-400" 
-                checked={showTopTraders}
-                onChange={(e) => setShowTopTraders(e.target.checked)}
-              /> Top Traders
+            <label className="flex items-center gap-1 cursor-pointer text-blue-400">
+              <input type="checkbox" className="accent-blue-400 w-3 h-3 lg:w-auto lg:h-auto" checked={showTopTraders} onChange={(e) => setShowTopTraders(e.target.checked)} /> Top
             </label>
-            <label className="flex items-center gap-1.5 cursor-pointer text-blue-500">
-              <input 
-                type="checkbox" 
-                className="accent-blue-500" 
-                checked={showYourTrades}
-                onChange={(e) => setShowYourTrades(e.target.checked)}
-              /> Your trades
+            <label className="flex items-center gap-1 cursor-pointer text-blue-500">
+              <input type="checkbox" className="accent-blue-500 w-3 h-3 lg:w-auto lg:h-auto" checked={showYourTrades} onChange={(e) => setShowYourTrades(e.target.checked)} /> Your
             </label>
           </div>
         </div>
       </div>
 
       {/* Bottom Tabs (Holders / Trades) */}
-      <div className="flex flex-1 min-h-0 border-t border-border/50">
+      <div className="w-full lg:flex lg:flex-1 lg:min-h-0 border-t border-border/50">
         {/* Left side: Live Trades Leaderboard */}
         <div className="w-80 border-r border-border/50 hidden xl:flex flex-col">
           <div className="flex items-center gap-4 px-4 py-3 border-b border-border/50">
@@ -459,7 +446,7 @@ export default function TokenInfo({ token }: { token: Token }) {
           </div>
         </div>
 
-        <div className="flex-1 flex flex-col min-w-0">
+        <div className="flex-1 lg:flex-1 flex flex-col min-w-0">
           <div className="flex items-center gap-4 px-4 py-3 border-b border-border/50">
             <button 
               onClick={() => setBottomTab('Trades')} 
@@ -474,17 +461,17 @@ export default function TokenInfo({ token }: { token: Token }) {
               User Thesis
             </button>
           </div>
-          <div className="flex-1 overflow-y-auto custom-scrollbar">
+          <div className="lg:flex-1 lg:overflow-y-auto custom-scrollbar">
             {bottomTab === 'Trades' && (
               <table className="w-full">
-                <thead className="sticky top-0 bg-background text-[10px] text-text-tertiary font-medium">
-                  <tr>
-                    <th className="text-left py-2 px-4">Wallet</th>
-                    <th className="text-left py-2">Action</th>
-                    <th className="text-left py-2">Volume</th>
-                    <th className="text-right py-2 px-4">Time</th>
-                  </tr>
-                </thead>
+                  <thead className="lg:sticky lg:top-0 bg-background text-[10px] text-text-tertiary font-medium">
+                    <tr>
+                      <th className="text-left py-2 px-4">Wallet</th>
+                      <th className="text-left py-2">Action</th>
+                      <th className="text-left py-2">Volume</th>
+                      <th className="text-right py-2 px-4">Time</th>
+                    </tr>
+                  </thead>
                 <tbody className="divide-y divide-border/30">
                   {tradesLoading ? (
                     [...Array(5)].map((_, i) => (
