@@ -25,6 +25,15 @@ export default function Providers({ children }: { children: React.ReactNode }) {
                   .replace('https://', 'wss://')
               ),
             },
+            'solana:devnet': {
+              rpc: createSolanaRpc(
+                process.env.NEXT_PUBLIC_ALCHEMY_RPC_URL || 'https://api.devnet.solana.com'
+              ),
+              rpcSubscriptions: createSolanaRpcSubscriptions(
+                (process.env.NEXT_PUBLIC_ALCHEMY_RPC_URL || 'https://api.devnet.solana.com')
+                  .replace('https://', 'wss://')
+              ),
+            },
           },
         },
         embeddedWallets: {

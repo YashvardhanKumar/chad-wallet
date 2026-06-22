@@ -22,7 +22,7 @@ export const KNOWN_TOKENS = [
   { address: 'JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN', symbol: 'JUP', name: 'Jupiter', logoURI: 'https://static.jup.ag/jup/icon.png' },
   { address: '7GCihgDB8fe6KNjn2MYtkzZcRjQy3t9GHdC8uHYmW2hr', symbol: 'POPCAT', name: 'Popcat', logoURI: 'https://bafkreidvkvuzyslsntpjfoif7ntxmanqfcjn65xaq6kqaht2zi7lqfhwmy.ipfs.nftstorage.link/' },
   { address: 'EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm', symbol: 'WIF', name: 'dogwifhat', logoURI: 'https://bafkreih4m3jy5rak3xkpgxe6nop52kqpqjaolxhsbqgvxlam43z3ycxfxe.ipfs.nftstorage.link/' },
-  { address: 'A8C3xuqscfmyLrte3VwJvdMmMPPHhDHbV7TCaRSxM7hy', symbol: 'FARTCOIN', name: 'Fartcoin', logoURI: '' },
+  { address: '9BB6NFEcjBCtnNLFko2FqVQBq8HHM13kCyYcdQbgpump', symbol: 'FARTCOIN', name: 'Fartcoin', logoURI: 'https://dd.dexscreener.com/arlight/cool/1729864273574.png' },
 ];
 
 // Feature cards for the landing page
