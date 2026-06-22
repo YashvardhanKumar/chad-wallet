@@ -468,7 +468,7 @@ export default function TradePanel({ token }: { token: Token | null }) {
                : `${tokenBalance !== null ? tokenBalance.toLocaleString('en-US', { maximumFractionDigits: 6 }) : '0.0000'} ${token.symbol} available`
              }
            </span>
-           <span className="text-text-secondary">$2.32 fee</span>
+           <span className="text-text-secondary">{"< $0.01 fee"}</span>
         </div>
 
         {/* Action Button */}
