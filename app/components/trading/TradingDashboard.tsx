@@ -34,6 +34,41 @@ export default function TradingDashboard({ initialAddress }: { initialAddress?: 
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<Token[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [solBalance, setSolBalance] = useState<number | null>(null);
+
+  // Poll SOL balance for Cash Balance calculation
+  useEffect(() => {
+    if (!wallets[0]?.address) {
+      setSolBalance(null);
+      return;
+    }
+    
+    async function fetchSolBalance() {
+      try {
+        const rpcUrl = process.env.NEXT_PUBLIC_ALCHEMY_RPC_URL || 'https://api.mainnet-beta.solana.com';
+        const res = await fetch(rpcUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            jsonrpc: '2.0',
+            id: 1,
+            method: 'getBalance',
+            params: [wallets[0].address],
+          }),
+        });
+        const data = await res.json();
+        if (data.result !== undefined) {
+          setSolBalance(data.result.value / 1e9);
+        }
+      } catch (e) {
+        console.error('Failed to fetch SOL balance for dashboard:', e);
+      }
+    }
+    
+    fetchSolBalance();
+    const interval = setInterval(fetchSolBalance, 15000);
+    return () => clearInterval(interval);
+  }, [wallets[0]?.address]);
 
   useEffect(() => {
     async function fetchTokens() {
@@ -191,7 +226,12 @@ export default function TradingDashboard({ initialAddress }: { initialAddress?: 
           <div className="hidden lg:flex items-center gap-4 mr-4 text-sm">
             <div className="text-right">
               <div className="text-text-secondary text-xs">Cash balance</div>
-              <div className="font-semibold">$0.00</div>
+              <div className="font-semibold text-white">
+                ${(solBalance !== null 
+                  ? solBalance * (tokens.find(t => t.symbol === 'SOL' || t.address === 'So11111111111111111111111111111111111111112')?.price || 150)
+                  : 0
+                ).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </div>
             </div>
           </div>
           {ready && (
