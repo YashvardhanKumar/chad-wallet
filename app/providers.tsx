@@ -31,12 +31,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
                   ? process.env.NEXT_PUBLIC_ALCHEMY_RPC_URL
                   : undefined) || 'https://api.devnet.solana.com'
               ),
-              rpcSubscriptions: createSolanaRpcSubscriptions(
-                ((process.env.NEXT_PUBLIC_ALCHEMY_RPC_URL?.includes('devnet')
-                  ? process.env.NEXT_PUBLIC_ALCHEMY_RPC_URL
-                  : undefined) || 'https://api.devnet.solana.com')
-                  .replace('https://', 'wss://')
-              ),
+              rpcSubscriptions: createSolanaRpcSubscriptions('wss://api.devnet.solana.com'),
             },
           },
         },

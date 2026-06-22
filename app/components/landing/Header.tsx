@@ -3,6 +3,7 @@
 import Image from 'next/image';
 import { usePrivy } from '@privy-io/react-auth';
 import { STORE_LINKS } from '@/app/lib/constants';
+import Link from 'next/link';
 
 export default function Header() {
   const { login, logout, authenticated, ready } = usePrivy();
@@ -12,7 +13,7 @@ export default function Header() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <a href="/" className="flex items-center gap-2">
+          <Link href="/" className="flex items-center gap-2">
             <Image
               src="/images/logo-dark.png"
               alt="ChadWallet"
@@ -21,7 +22,7 @@ export default function Header() {
               className="rounded-lg"
             />
             <span className="text-xl font-bold tracking-tight hidden sm:block">ChadWallet</span>
-          </a>
+          </Link>
 
           {/* Right side */}
           <div className="flex items-center gap-3">
@@ -59,12 +60,12 @@ export default function Header() {
             {ready && (
               authenticated ? (
                 <div className="flex items-center gap-2">
-                  <a
+                  <Link
                     href="/trade"
                     className="bg-accent hover:bg-accent-hover text-black font-semibold px-5 py-2 rounded-xl transition-all duration-200"
                   >
                     Start Trading
-                  </a>
+                  </Link>
                   <button
                     onClick={logout}
                     className="text-text-secondary hover:text-text-primary text-sm transition-colors px-3 py-2"

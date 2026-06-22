@@ -89,7 +89,14 @@ export async function getTrendingTokens(limit = 20, offset = 0): Promise<Trendin
     if (!res.ok) throw new Error(`BirdEye API error: ${res.status}`);
     const data = await res.json();
 
-    return (data.data?.tokens || []).map((t: Record<string, unknown>) => ({
+    const rawTokens: any[] = data.data?.tokens || [];
+    const tokens = rawTokens.filter((t: any) => {
+      const liq = Number(t.liquidity || 0);
+      const vol = Number(t.volume24hUSD || t.volume24h || t.v24hUSD || 0);
+      return liq >= 100 || vol >= 100;
+    });
+
+    return tokens.map((t: any): TrendingToken => ({
       address: t.address,
       symbol: t.symbol,
       name: t.name,

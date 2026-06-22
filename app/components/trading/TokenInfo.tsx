@@ -40,11 +40,13 @@ export default function TokenInfo({ token }: { token: Token }) {
   const chartRef = useRef<any>(null);
   const seriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
 
+  const [chartLoading, setChartLoading] = useState(false);
   const [theses, setTheses] = useState<any[]>([]);
   const [thesisContent, setThesisContent] = useState('');
   const [thesisImage, setThesisImage] = useState('');
   const [isSubmittingThesis, setIsSubmittingThesis] = useState(false);
   const [liveTrades, setLiveTrades] = useState<any[]>([]);
+  const [tradesLoading, setTradesLoading] = useState(true);
   const [showFriends, setShowFriends] = useState(false);
   const [showTopTraders, setShowTopTraders] = useState(true);
   const [showYourTrades, setShowYourTrades] = useState(true);
@@ -52,6 +54,7 @@ export default function TokenInfo({ token }: { token: Token }) {
   // Fetch theses & trades from Supabase & BirdEye
   useEffect(() => {
     async function fetchData() {
+      setTradesLoading(true);
       const { data } = await supabase
         .from('theses')
         .select('*')
@@ -66,6 +69,7 @@ export default function TokenInfo({ token }: { token: Token }) {
       } catch (e) {
         console.error('Failed to fetch trades', e);
       }
+      setTradesLoading(false);
     }
     fetchData();
   }, [token.address]);
@@ -96,6 +100,7 @@ export default function TokenInfo({ token }: { token: Token }) {
   // Fetch real chart data based on timeRange
   useEffect(() => {
     async function fetchChartData() {
+      setChartLoading(true);
       const now = Math.floor(Date.now() / 1000);
       let type: '1m' | '5m' | '15m' | '1H' | '4H' | '1D' | '1W' = '15m';
       let timeFrom = now - 86400;
@@ -134,6 +139,7 @@ export default function TokenInfo({ token }: { token: Token }) {
       } catch (e) {
         console.error('Failed to fetch history', e);
       }
+      setChartLoading(false);
     }
     fetchChartData();
   }, [token.address, timeRange]);
@@ -335,7 +341,14 @@ export default function TokenInfo({ token }: { token: Token }) {
 
       {/* Chart Section */}
       <div className="relative px-6 py-4 flex flex-col shrink-0">
-        <div ref={chartContainerRef} className="w-full" style={{ height: '300px' }} />
+        <div className="relative">
+          <div ref={chartContainerRef} className="w-full" style={{ height: '300px' }} />
+          {chartLoading && (
+            <div className="absolute inset-0 bg-background/60 flex items-center justify-center rounded-lg">
+              <div className="w-6 h-6 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+            </div>
+          )}
+        </div>
         
         {/* Chart Overlays / Filters */}
         <div className="flex items-center justify-between mt-4">
@@ -410,7 +423,17 @@ export default function TokenInfo({ token }: { token: Token }) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/30">
-                {liveTrades.map((t, i) => (
+                {tradesLoading ? (
+                  [...Array(6)].map((_, i) => (
+                    <tr key={i} className="animate-pulse">
+                      <td className="py-3 px-4"><div className="h-6 bg-surface rounded w-24" /></td>
+                      <td className="py-3"><div className="h-5 bg-surface rounded w-12" /></td>
+                      <td className="py-3 px-4 text-right"><div className="h-5 bg-surface rounded w-16 ml-auto" /></td>
+                    </tr>
+                  ))
+                ) : liveTrades.length === 0 ? (
+                  <tr><td colSpan={3} className="py-8 text-center text-sm text-text-tertiary">No recent swaps</td></tr>
+                ) : liveTrades.map((t, i) => (
                   <tr key={i} className="hover:bg-white/5 transition-colors cursor-pointer group">
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-2">
@@ -463,7 +486,18 @@ export default function TokenInfo({ token }: { token: Token }) {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/30">
-                  {liveTrades.map((t, i) => (
+                  {tradesLoading ? (
+                    [...Array(5)].map((_, i) => (
+                      <tr key={i} className="animate-pulse">
+                        <td className="py-2.5 px-4"><div className="h-5 bg-surface rounded w-20" /></td>
+                        <td className="py-2.5"><div className="h-4 bg-surface rounded w-10" /></td>
+                        <td className="py-2.5"><div className="h-4 bg-surface rounded w-12" /></td>
+                        <td className="py-2.5 px-4 text-right"><div className="h-4 bg-surface rounded w-14 ml-auto" /></td>
+                      </tr>
+                    ))
+                  ) : liveTrades.length === 0 ? (
+                    <tr><td colSpan={4} className="py-8 text-center text-sm text-text-tertiary">No recent swaps</td></tr>
+                  ) : liveTrades.map((t, i) => (
                     <tr key={i} className="hover:bg-white/5 transition-colors cursor-pointer">
                       <td className="py-2.5 px-4">
                          <div className="flex items-center gap-2">
@@ -513,16 +547,30 @@ export default function TokenInfo({ token }: { token: Token }) {
                     <button
                       onClick={handleSubmitThesis}
                       disabled={isSubmittingThesis || !thesisContent.trim()}
-                      className="bg-accent hover:bg-accent-hover disabled:opacity-50 text-black px-4 py-1.5 rounded-lg text-xs font-bold transition-colors"
+                      className="bg-accent hover:bg-accent-hover disabled:opacity-50 text-black px-4 py-1.5 rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5"
                     >
-                      {isSubmittingThesis ? 'Posting...' : authenticated ? 'Post Thesis' : 'Login to Post'}
+                      {isSubmittingThesis ? (
+                        <><svg className="animate-spin h-3 w-3" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>Posting...</>
+                      ) : authenticated ? 'Post Thesis' : 'Login to Post'}
                     </button>
                   </div>
                 </div>
 
                 {/* Theses Feed */}
                 <div className="flex flex-col gap-3">
-                  {theses.length === 0 ? (
+                  {tradesLoading ? (
+                    [...Array(3)].map((_, i) => (
+                      <div key={i} className="animate-pulse bg-white/5 rounded-xl p-3 border border-border/30">
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="w-6 h-6 bg-surface rounded-full" />
+                          <div className="h-3 bg-surface rounded w-24" />
+                          <div className="h-3 bg-surface rounded w-16 ml-auto" />
+                        </div>
+                        <div className="h-4 bg-surface rounded w-3/4 mb-2" />
+                        <div className="h-4 bg-surface rounded w-1/2" />
+                      </div>
+                    ))
+                  ) : theses.length === 0 ? (
                     <div className="text-center text-sm text-text-tertiary py-8">
                       No theses yet. Be the first to post!
                     </div>

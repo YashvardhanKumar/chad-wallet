@@ -3,6 +3,7 @@
 import Image from 'next/image';
 import { usePrivy } from '@privy-io/react-auth';
 import { STORE_LINKS } from '@/app/lib/constants';
+import Link from 'next/link';
 
 export default function Hero() {
   const { login, authenticated } = usePrivy();
@@ -39,13 +40,13 @@ export default function Hero() {
         {/* CTA Buttons */}
         <div className="flex flex-col sm:flex-row gap-3 mt-4">
           {authenticated ? (
-            <a
+            <Link
               href="/trade"
               className="group bg-accent hover:bg-accent-hover text-black font-bold px-8 py-4 rounded-2xl text-lg transition-all duration-200 flex items-center gap-2"
             >
               Start Trading
               <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
-            </a>
+            </Link>
           ) : (
             <button
               onClick={login}

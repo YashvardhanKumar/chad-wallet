@@ -68,7 +68,7 @@ export default function TokenBanner({ direction = 'left' }: TokenBannerProps) {
           <Link
             key={`${token.address}-${i}`}
             href={`/trade/${token.address}`}
-            className="flex items-center gap-3 px-5 py-3 hover:bg-white/5 transition-colors cursor-pointer flex-shrink-0"
+            className="flex items-center gap-3 px-5 py-3 hover:bg-white/5 transition-colors cursor-pointer shrink-0"
           >
             {token.logoURI ? (
               <Image

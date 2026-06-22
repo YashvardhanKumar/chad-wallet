@@ -1,5 +1,6 @@
 import Image from 'next/image';
 import { STORE_LINKS, SOCIAL_LINKS } from '@/app/lib/constants';
+import Link from 'next/link';
 
 export default function Footer() {
   const year = new Date().getFullYear();
@@ -10,7 +11,7 @@ export default function Footer() {
         {/* Brand */}
         <div className="flex flex-col gap-6">
           <div className="flex flex-col gap-3">
-            <a href="/" className="flex items-center gap-2">
+            <Link href="/" className="flex items-center gap-2">
               <Image
                 src="/images/logo-dark.png"
                 alt="ChadWallet"
@@ -19,7 +20,7 @@ export default function Footer() {
                 className="rounded-lg"
               />
               <span className="text-xl font-bold">ChadWallet</span>
-            </a>
+            </Link>
             <p className="text-text-secondary text-lg tracking-tight">
               the only wallet you need.
             </p>

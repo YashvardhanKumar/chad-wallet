@@ -21,9 +21,10 @@ interface TrendingListProps {
   onSelect: (token: Token) => void;
   onLoadMore?: () => void;
   isLoadingMore?: boolean;
+  isLoading?: boolean;
 }
 
-export default function TrendingList({ tokens, selectedAddress, onSelect, onLoadMore, isLoadingMore }: TrendingListProps) {
+export default function TrendingList({ tokens, selectedAddress, onSelect, onLoadMore, isLoadingMore, isLoading }: TrendingListProps) {
   const [activeTab, setActiveTab] = useState('Trending');
 
   const sortedTokens = [...tokens].sort((a, b) => {
@@ -106,7 +107,7 @@ export default function TrendingList({ tokens, selectedAddress, onSelect, onLoad
           </button>
         ))}
 
-        {tokens.length === 0 && (
+        {isLoading && tokens.length === 0 && (
           <div className="px-4 py-8 text-center">
             <div className="animate-pulse space-y-3">
               {[...Array(8)].map((_, i) => (

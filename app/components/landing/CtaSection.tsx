@@ -2,6 +2,7 @@
 
 import { usePrivy } from '@privy-io/react-auth';
 import { STORE_LINKS } from '@/app/lib/constants';
+import Link from 'next/link';
 
 export default function CtaSection() {
   const { login, authenticated } = usePrivy();
@@ -9,7 +10,7 @@ export default function CtaSection() {
   return (
     <section className="relative py-32 px-4 sm:px-6 lg:px-8 overflow-hidden">
       {/* Background glow */}
-      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-accent/5 to-transparent pointer-events-none" />
+      <div className="absolute inset-0 bg-linear-to-b from-transparent via-accent/5 to-transparent pointer-events-none" />
 
       <div className="relative max-w-3xl mx-auto text-center">
         <h2 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tighter mb-6">
@@ -21,12 +22,12 @@ export default function CtaSection() {
 
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
           {authenticated ? (
-            <a
+            <Link
               href="/trade"
               className="bg-accent hover:bg-accent-hover text-black font-bold px-8 py-4 rounded-2xl text-lg transition-all duration-200"
             >
               Start Trading
-            </a>
+            </Link>
           ) : (
             <button
               onClick={login}

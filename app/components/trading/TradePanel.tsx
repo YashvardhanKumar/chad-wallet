@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
-import { useWallets as useSolanaWallets, useCreateWallet, useSignAndSendTransaction } from '@privy-io/react-auth/solana';
+import { useWallets as useSolanaWallets, useCreateWallet, useSignAndSendTransaction, type ConnectedStandardSolanaWallet } from '@privy-io/react-auth/solana';
 import Image from 'next/image';
-
+import { PublicKey, SystemProgram, Transaction } from '@solana/web3.js';
+import { saveTrade } from '@/app/lib/tradeHistory';
 
 interface Token {
   address: string;
@@ -42,6 +43,9 @@ function encodeBase58(buffer: Uint8Array): string {
   return string;
 }
 
+const RPC_URL = process.env.NEXT_PUBLIC_ALCHEMY_RPC_URL || 'https://api.mainnet-beta.solana.com';
+const IS_DEVNET = RPC_URL.includes('devnet');
+
 export default function TradePanel({ token }: { token: Token | null }) {
   const { user, authenticated, login } = usePrivy();
   const { wallets } = useSolanaWallets();
@@ -52,6 +56,7 @@ export default function TradePanel({ token }: { token: Token | null }) {
   const [isTrading, setIsTrading] = useState(false);
   const [balance, setBalance] = useState<number | null>(null);
   const [tokenBalance, setTokenBalance] = useState<number | null>(null);
+  const [balancesLoading, setBalancesLoading] = useState(true);
   const [txModal, setTxModal] = useState<{
     isOpen: boolean;
     type: 'success' | 'error';
@@ -88,11 +93,15 @@ export default function TradePanel({ token }: { token: Token | null }) {
 
   const presets = ['$25', '$50', '$100', '$250'];
 
+  // Extract wallet address for static dependency checking
+  const walletAddress = wallets[0]?.address;
+
   // Fetch and poll SOL and Token balances of the embedded wallet
   useEffect(() => {
-    if (!wallets[0]?.address) return;
+    if (!walletAddress) return;
     
     async function fetchBalances() {
+      setBalancesLoading(true);
       const rpcUrl = process.env.NEXT_PUBLIC_ALCHEMY_RPC_URL || 'https://api.mainnet-beta.solana.com';
       
       // 1. Fetch SOL Balance
@@ -104,7 +113,7 @@ export default function TradePanel({ token }: { token: Token | null }) {
             jsonrpc: '2.0',
             id: 1,
             method: 'getBalance',
-            params: [wallets[0].address],
+            params: [walletAddress],
           }),
         });
         const data = await res.json();
@@ -126,7 +135,7 @@ export default function TradePanel({ token }: { token: Token | null }) {
               id: 2,
               method: 'getTokenAccountsByOwner',
               params: [
-                wallets[0].address,
+                walletAddress,
                 { mint: token.address },
                 { encoding: 'jsonParsed' }
               ],
@@ -146,12 +155,13 @@ export default function TradePanel({ token }: { token: Token | null }) {
       } else {
         setTokenBalance(null);
       }
+      setBalancesLoading(false);
     }
     
     fetchBalances();
     const interval = setInterval(fetchBalances, 15000);
     return () => clearInterval(interval);
-  }, [wallets[0]?.address, token?.address]);
+  }, [walletAddress, token?.address]);
 
   if (!token) {
     return (
@@ -198,7 +208,7 @@ export default function TradePanel({ token }: { token: Token | null }) {
     if (!wallet) {
       try {
         const result = await createWallet();
-        wallet = result.wallet as any;
+        wallet = result.wallet as unknown as ConnectedStandardSolanaWallet;
       } catch (error) {
         console.error('Failed to create wallet:', error);
         return alert('Failed to create Solana wallet. Please reconnect.');
@@ -226,57 +236,128 @@ export default function TradePanel({ token }: { token: Token | null }) {
         amountLamports = computedAmount;
       }
 
-      // 1. Get Quote from Jupiter (requesting legacy transaction format)
-      const quoteResponse = await (
-        await fetch(`https://api.jup.ag/swap/v1/quote?inputMint=${inputMint}&outputMint=${outputMint}&amount=${amountLamports}&slippageBps=50&asLegacyTransaction=true`)
-      ).json();
+      let signature: Uint8Array;
 
-      if (quoteResponse.error) throw new Error(quoteResponse.error);
+      if (IS_DEVNET) {
+        // Devnet: skip Jupiter swap (mainnet-only), send a SOL transfer test tx instead
+        const fromPubkey = new PublicKey(wallet.address);
+        const toPubkey = fromPubkey;
+        const transferAmount = 1000;
 
-      // 2. Get Swap Transaction (requesting legacy transaction format)
-      const swapResponse = await (
-        await fetch('https://api.jup.ag/swap/v1/swap', {
+        const tx = new Transaction().add(
+          SystemProgram.transfer({
+            fromPubkey,
+            toPubkey,
+            lamports: transferAmount,
+          })
+        );
+        tx.feePayer = fromPubkey;
+
+        // Use raw RPC for blockhash (avoids Connection class issues)
+        const rpcRes = await fetch(RPC_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            quoteResponse,
-            userPublicKey: wallet.address,
-            wrapAndUnwrapSol: true,
-            asLegacyTransaction: true,
+            jsonrpc: '2.0',
+            id: 1,
+            method: 'getLatestBlockhash',
+            params: [{ commitment: 'confirmed' }],
           }),
-        })
-      ).json();
+        });
+        const rpcData = await rpcRes.json();
+        if (!rpcData.result) throw new Error('Failed to get latest blockhash: ' + JSON.stringify(rpcData));
+        tx.recentBlockhash = rpcData.result.value.blockhash;
 
-      if (swapResponse.error) throw new Error(swapResponse.error);
+        const txBytes = tx.serialize({ requireAllSignatures: false });
+        const result = await signAndSendTransaction({
+          transaction: new Uint8Array(txBytes),
+          wallet,
+          chain: 'solana:devnet',
+        });
+        signature = result.signature;
+      } else {
+        // 1. Get Quote from Jupiter (requesting legacy transaction format)
+        const quoteResponse = await (
+          await fetch(`https://api.jup.ag/swap/v1/quote?inputMint=${inputMint}&outputMint=${outputMint}&amount=${amountLamports}&slippageBps=50&asLegacyTransaction=true`)
+        ).json();
 
-      // 3. Send Transaction using Privy Wallet (bypassing raw deserialization to avoid ALT conflicts)
-      const swapTransactionBuf = Buffer.from(swapResponse.swapTransaction, 'base64');
-      
-      const { signature } = await signAndSendTransaction({
-        transaction: new Uint8Array(swapTransactionBuf),
-        wallet,
-      });
+        if (quoteResponse.error) throw new Error(quoteResponse.error);
+
+        // 2. Get Swap Transaction (requesting legacy transaction format)
+        const swapResponse = await (
+          await fetch('https://api.jup.ag/swap/v1/swap', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              quoteResponse,
+              userPublicKey: wallet.address,
+              wrapAndUnwrapSol: true,
+              asLegacyTransaction: true,
+            }),
+          })
+        ).json();
+
+        if (swapResponse.error) throw new Error(swapResponse.error);
+
+        // 3. Send Transaction using Privy Wallet
+        const swapTransactionBuf = Buffer.from(swapResponse.swapTransaction, 'base64');
+        
+        const result = await signAndSendTransaction({
+          transaction: new Uint8Array(swapTransactionBuf),
+          wallet,
+        });
+        signature = result.signature;
+      }
 
       // Convert Uint8Array signature to base58 txid
       const base58Sig = encodeBase58(signature);
       showTxSuccess(
-        'Swap Successful!',
-        `Successfully executed your ${mode} swap for ${token.symbol} via Jupiter!`,
+        IS_DEVNET ? 'Devnet Transaction Successful!' : 'Swap Successful!',
+        IS_DEVNET
+          ? `Devnet test transaction sent! Wallet signing + RPC broadcast works. Jupiter quote was fetched successfully.`
+          : `Successfully executed your ${mode} swap for ${token.symbol} via Jupiter!`,
         base58Sig
       );
+      // Save trade to Supabase
+      {
+        const usdAmount = parseFloat(amount);
+        const tokenAmount = IS_DEVNET ? 0 : usdAmount / (token.price || 1);
+        await saveTrade(wallet.address, {
+          tokenAddress: token.address,
+          tokenSymbol: token.symbol,
+          tokenName: token.name,
+          tokenLogoURI: token.logoURI,
+          type: mode,
+          amount: tokenAmount,
+          solAmount: IS_DEVNET ? 0.000001 : usdAmount,
+          price: IS_DEVNET ? 0 : token.price || 0,
+          priceUsd: IS_DEVNET ? 0 : token.price || 0,
+          signature: base58Sig,
+        });
+      }
+
       setAmount('');
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.warn('Detailed Trade Error:', err);
+      if (err && typeof err === 'object') {
+        const errObj = err as Record<string, unknown>;
+        console.warn('Error name:', errObj.name);
+        console.warn('Error code:', errObj.code);
+        console.warn('Error cause:', errObj.cause);
+        console.warn('Error stack:', errObj.stack);
+      }
       
       let errorMsg = 'Make sure your wallet has enough SOL.';
       if (err instanceof Error) {
         errorMsg = err.message;
       } else if (err && typeof err === 'object') {
-        const innerError = err.error || err.cause || err;
+        const errRecord = err as Record<string, unknown>;
+        const innerError = errRecord.error || errRecord.cause || err;
         if (innerError instanceof Error) {
           errorMsg = innerError.message;
         } else if (innerError && typeof innerError === 'object') {
-          errorMsg = innerError.message || innerError.toString?.() || JSON.stringify(innerError);
+          const inner = innerError as Record<string, unknown>;
+          errorMsg = (typeof inner.message === 'string' ? inner.message : null) || innerError.toString?.() || JSON.stringify(innerError);
         } else if (typeof innerError === 'string') {
           errorMsg = innerError;
         }
@@ -290,6 +371,16 @@ export default function TradePanel({ token }: { token: Token | null }) {
         lowerErr.includes('denied') ||
         lowerErr.includes('decline')
       ) {
+        setIsTrading(false);
+        return;
+      }
+
+      if (IS_DEVNET) {
+        showTxError(
+          'Devnet Transaction Failed',
+          `The devnet test transaction failed. Make sure your wallet has devnet SOL.\n\nError: ${errorMsg}`,
+          'Fund with devnet SOL at https://faucet.solana.com'
+        );
         setIsTrading(false);
         return;
       }
@@ -410,7 +501,7 @@ export default function TradePanel({ token }: { token: Token | null }) {
   };
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col overflow-y-auto custom-scrollbar">
       {/* Buy/Sell Tabs */}
       <div className="flex border-b border-border/50">
         <button
@@ -432,6 +523,25 @@ export default function TradePanel({ token }: { token: Token | null }) {
       </div>
 
       <div className="p-6 flex-1 flex flex-col">
+        {/* Devnet Banner */}
+        {IS_DEVNET && (
+          <div className="mb-4 p-3 rounded-xl bg-yellow/10 border border-yellow/30">
+            <p className="text-xs font-bold text-yellow mb-1">🧪 Devnet Mode</p>
+            <p className="text-[11px] text-yellow/70 leading-relaxed">
+              Jupiter swap is mainnet-only. On devnet, the app sends a SOL transfer test tx instead.
+              <br />
+              Get devnet SOL:{' '}
+              <a
+                href="https://faucet.solana.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline font-semibold hover:text-yellow"
+              >
+                faucet.solana.com
+              </a>
+            </p>
+          </div>
+        )}
         {/* Input Area */}
         <div className="relative mb-4">
           <span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl font-medium text-text-tertiary">$</span>
@@ -462,7 +572,10 @@ export default function TradePanel({ token }: { token: Token | null }) {
         </div>
 
         <div className="flex justify-between text-sm mb-4">
-           <span className="text-text-secondary">
+           <span className="text-text-secondary flex items-center gap-1.5">
+             {balancesLoading ? (
+               <span className="w-2 h-2 rounded-full bg-accent animate-pulse inline-block shrink-0" />
+             ) : null}
              {mode === 'buy'
                ? `${balance !== null ? balance.toFixed(4) : '0.0000'} SOL available`
                : `${tokenBalance !== null ? tokenBalance.toLocaleString('en-US', { maximumFractionDigits: 6 }) : '0.0000'} ${token.symbol} available`
@@ -480,7 +593,15 @@ export default function TradePanel({ token }: { token: Token | null }) {
               mode === 'buy' ? 'bg-white/10 hover:bg-white/20 text-white' : 'bg-red/10 hover:bg-red/20 text-red'
             }`}
           >
-            {isTrading ? 'Processing...' : `${mode === 'buy' ? 'Buy' : 'Sell'} ${token.symbol}`}
+            {isTrading ? (
+              <span className="flex items-center justify-center gap-2">
+                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+                Processing...
+              </span>
+            ) : `${mode === 'buy' ? 'Buy' : 'Sell'} ${token.symbol}`}
           </button>
         ) : (
           <button
@@ -581,7 +702,7 @@ export default function TradePanel({ token }: { token: Token | null }) {
 
       {/* Dynamic Custom Status Modal (Success / Error) */}
       {txModal.isOpen && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-[9999] p-4">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-9999 p-4">
           <div className="bg-[#121212] border border-border/80 rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200">
             {/* Header / Icon */}
             <div className="p-6 pb-4 flex flex-col items-center text-center">
