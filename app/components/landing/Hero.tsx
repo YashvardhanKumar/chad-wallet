@@ -9,7 +9,7 @@ export default function Hero() {
   const { login, authenticated } = usePrivy();
 
   return (
-    <section className="relative min-h-screen flex flex-col items-center justify-center pt-20 pb-10 hero-gradient noise-overlay">
+    <section className="relative flex flex-col items-center justify-center pt-20 pb-10 hero-gradient noise-overlay" style={{ minHeight: '100dvh' }}>
       <div className="relative z-10 flex flex-col items-center gap-6 px-6 text-center max-w-4xl mx-auto">
         {/* Logo */}
         <div className="animate-float">

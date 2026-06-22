@@ -186,7 +186,7 @@ export default function TradingDashboard({ initialAddress }: { initialAddress?: 
   };
 
   return (
-    <div className="h-screen bg-background flex flex-col overflow-hidden">
+    <div className="bg-background flex flex-col overflow-hidden" style={{ height: '100dvh' }}>
       {/* Top bar */}
       <header className="h-14 border-b border-border flex items-center justify-between px-3 lg:px-6 glass shrink-0">
         <div className="flex items-center gap-2 lg:gap-6">

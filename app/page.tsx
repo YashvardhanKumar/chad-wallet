@@ -7,7 +7,7 @@ import Footer from './components/landing/Footer';
 
 export default function Home() {
   return (
-    <div className="flex flex-col min-h-screen bg-background text-text-primary overflow-x-hidden selection:bg-accent/30 selection:text-white">
+    <div className="flex flex-col bg-background text-text-primary overflow-x-hidden selection:bg-accent/30 selection:text-white" style={{ minHeight: '100dvh' }}>
       <Header />
       <main className="flex-1 flex flex-col w-full">
         <Hero />
