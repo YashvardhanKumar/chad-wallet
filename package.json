@@ -9,7 +9,18 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@privy-io/react-auth": "^3.32.1",
+    "@solana-program/memo": "^0.11.2",
+    "@solana-program/system": "^0.12.2",
+    "@solana-program/token": "^0.13.0",
+    "@solana/kit": "^6.10.0",
+    "@solana/web3.js": "^1.98.4",
+    "@supabase/supabase-js": "^2.108.2",
+    "bs58": "^6.0.0",
+    "framer-motion": "^12.40.0",
+    "lightweight-charts": "4.1.1",
     "next": "16.2.9",
+    "next-cloudinary": "^6.17.5",
     "react": "19.2.4",
     "react-dom": "19.2.4"
   },
