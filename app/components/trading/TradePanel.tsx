@@ -210,6 +210,10 @@ export default function TradePanel({ token }: { token: Token | null }) {
       const SOL_MINT = 'So11111111111111111111111111111111111111112';
       const inputMint = mode === 'buy' ? SOL_MINT : token.address;
       const outputMint = mode === 'buy' ? token.address : SOL_MINT;
+
+      if (inputMint === outputMint) {
+        throw new Error("Cannot swap a token for itself. Please select a different token to trade.");
+      }
       
       const usdAmount = parseFloat(amount);
       let amountLamports = 0;
@@ -262,7 +266,7 @@ export default function TradePanel({ token }: { token: Token | null }) {
       );
       setAmount('');
     } catch (err: any) {
-      console.error('Detailed Trade Error:', err);
+      console.warn('Detailed Trade Error:', err);
       
       let errorMsg = 'Make sure your wallet has enough SOL.';
       if (err instanceof Error) {
