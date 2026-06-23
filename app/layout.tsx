@@ -6,8 +6,8 @@ import Providers from "./providers";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "ChadWallet | Trade Solana Memecoins",
-  description: "The only wallet you need. Find the next 100x memecoins and trade trending Solana tokens 24/7.",
+  title: "ChadWallet | The #1 meme coin trading app!",
+  description: "ChadWallet helps you discover, track, buy, and trade Solana assets through a fast and social-first mobile experience.",
 };
 
 export default function RootLayout({
@@ -17,7 +17,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${inter.className} h-full antialiased dark`}>
-      <body className="min-h-full flex flex-col bg-background text-text-primary">
+      <body className="flex h-full flex-col">
         <Providers>{children}</Providers>
       </body>
     </html>

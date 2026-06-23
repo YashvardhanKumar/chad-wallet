@@ -4,8 +4,8 @@ import { useState, useEffect } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
 import { useWallets as useSolanaWallets, useCreateWallet, useSignAndSendTransaction, type ConnectedStandardSolanaWallet } from '@privy-io/react-auth/solana';
 import Image from 'next/image';
-import { PublicKey, SystemProgram, Transaction } from '@solana/web3.js';
 import { saveTrade } from '@/app/lib/tradeHistory';
+import { getMainnetRpcUrl } from '@/app/lib/solanaRpc';
 
 interface Token {
   address: string;
@@ -43,8 +43,7 @@ function encodeBase58(buffer: Uint8Array): string {
   return string;
 }
 
-const RPC_URL = process.env.NEXT_PUBLIC_ALCHEMY_RPC_URL || 'https://api.mainnet-beta.solana.com';
-const IS_DEVNET = RPC_URL.includes('devnet');
+const RPC_URL = getMainnetRpcUrl();
 
 export default function TradePanel({ token }: { token: Token | null }) {
   const { user, authenticated, login } = usePrivy();
@@ -102,7 +101,7 @@ export default function TradePanel({ token }: { token: Token | null }) {
     
     async function fetchBalances() {
       setBalancesLoading(true);
-      const rpcUrl = process.env.NEXT_PUBLIC_ALCHEMY_RPC_URL || 'https://api.mainnet-beta.solana.com';
+      const rpcUrl = RPC_URL;
       
       // 1. Fetch SOL Balance
       try {
@@ -236,92 +235,65 @@ export default function TradePanel({ token }: { token: Token | null }) {
         amountLamports = computedAmount;
       }
 
-      let signature: Uint8Array;
+      // 1. Get Quote from Jupiter
+      const quoteRes = await fetch(`https://api.jup.ag/swap/v1/quote?inputMint=${inputMint}&outputMint=${outputMint}&amount=${amountLamports}&slippageBps=50`);
+      const quoteResponse = await quoteRes.json();
 
-      if (IS_DEVNET) {
-        // Devnet: skip Jupiter swap (mainnet-only), send a SOL transfer test tx instead
-        const fromPubkey = new PublicKey(wallet.address);
-        const toPubkey = fromPubkey;
-        const transferAmount = 1000;
+      if (!quoteRes.ok || quoteResponse.error) {
+        const msg = quoteResponse.errorCode === 'NO_ROUTES'
+          ? 'No route found for this token pair. Try a different token or amount.'
+          : (quoteResponse.error || `Jupiter quote failed (${quoteRes.status})`);
+        throw new Error(msg);
+      }
 
-        const tx = new Transaction().add(
-          SystemProgram.transfer({
-            fromPubkey,
-            toPubkey,
-            lamports: transferAmount,
-          })
-        );
-        tx.feePayer = fromPubkey;
-
-        // Use raw RPC for blockhash (avoids Connection class issues)
-        const rpcRes = await fetch(RPC_URL, {
+      // 2. Get Swap Transaction (legacy for modal display compatibility)
+      const swapResponse = await (
+        await fetch('https://api.jup.ag/swap/v1/swap', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            jsonrpc: '2.0',
-            id: 1,
-            method: 'getLatestBlockhash',
-            params: [{ commitment: 'confirmed' }],
+            quoteResponse,
+            userPublicKey: wallet.address,
+            wrapAndUnwrapSol: true,
+            asLegacyTransaction: true,
+            dynamicComputeUnitLimit: true,
           }),
-        });
-        const rpcData = await rpcRes.json();
-        if (!rpcData.result) throw new Error('Failed to get latest blockhash: ' + JSON.stringify(rpcData));
-        tx.recentBlockhash = rpcData.result.value.blockhash;
+        })
+      ).json();
 
-        const txBytes = tx.serialize({ requireAllSignatures: false });
-        const result = await signAndSendTransaction({
-          transaction: new Uint8Array(txBytes),
-          wallet,
-          chain: 'solana:devnet',
-        });
-        signature = result.signature;
-      } else {
-        // 1. Get Quote from Jupiter (requesting legacy transaction format)
-        const quoteResponse = await (
-          await fetch(`https://api.jup.ag/swap/v1/quote?inputMint=${inputMint}&outputMint=${outputMint}&amount=${amountLamports}&slippageBps=50&asLegacyTransaction=true`)
-        ).json();
+      if (swapResponse.error) throw new Error(swapResponse.error);
 
-        if (quoteResponse.error) throw new Error(quoteResponse.error);
-
-        // 2. Get Swap Transaction (requesting legacy transaction format)
-        const swapResponse = await (
-          await fetch('https://api.jup.ag/swap/v1/swap', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              quoteResponse,
-              userPublicKey: wallet.address,
-              wrapAndUnwrapSol: true,
-              asLegacyTransaction: true,
-            }),
-          })
-        ).json();
-
-        if (swapResponse.error) throw new Error(swapResponse.error);
-
-        // 3. Send Transaction using Privy Wallet
-        const swapTransactionBuf = Buffer.from(swapResponse.swapTransaction, 'base64');
-        
-        const result = await signAndSendTransaction({
-          transaction: new Uint8Array(swapTransactionBuf),
-          wallet,
-        });
-        signature = result.signature;
-      }
+      // 3. Send Transaction using Privy Wallet
+      const swapTransactionBuf = Buffer.from(swapResponse.swapTransaction, 'base64');
+      
+      const result = await signAndSendTransaction({
+        transaction: new Uint8Array(swapTransactionBuf),
+        wallet,
+        chain: 'solana:mainnet',
+        options: {
+          skipPreflight: true,
+          uiOptions: {
+            description: `${mode === 'buy' ? 'Swap' : 'Swap'} $${amount} ${mode === 'buy' ? 'SOL →' : '→ SOL'} ${token.symbol}`,
+            transactionInfo: {
+              title: 'Swap Details',
+              action: `${mode === 'buy' ? 'Buy' : 'Sell'} ${token.symbol}`,
+            },
+          },
+        },
+      });
+      const signature = result.signature;
 
       // Convert Uint8Array signature to base58 txid
       const base58Sig = encodeBase58(signature);
       showTxSuccess(
-        IS_DEVNET ? 'Devnet Transaction Successful!' : 'Swap Successful!',
-        IS_DEVNET
-          ? `Devnet test transaction sent! Wallet signing + RPC broadcast works. Jupiter quote was fetched successfully.`
-          : `Successfully executed your ${mode} swap for ${token.symbol} via Jupiter!`,
+        'Swap Successful!',
+        `Successfully executed your ${mode} swap for ${token.symbol} via Jupiter!`,
         base58Sig
       );
       // Save trade to Supabase
       {
         const usdAmount = parseFloat(amount);
-        const tokenAmount = IS_DEVNET ? 0 : usdAmount / (token.price || 1);
+        const tokenAmount = usdAmount / (token.price || 1);
         await saveTrade(wallet.address, {
           tokenAddress: token.address,
           tokenSymbol: token.symbol,
@@ -329,9 +301,9 @@ export default function TradePanel({ token }: { token: Token | null }) {
           tokenLogoURI: token.logoURI,
           type: mode,
           amount: tokenAmount,
-          solAmount: IS_DEVNET ? 0.000001 : usdAmount,
-          price: IS_DEVNET ? 0 : token.price || 0,
-          priceUsd: IS_DEVNET ? 0 : token.price || 0,
+          solAmount: usdAmount,
+          price: token.price || 0,
+          priceUsd: token.price || 0,
           signature: base58Sig,
         });
       }
@@ -375,22 +347,12 @@ export default function TradePanel({ token }: { token: Token | null }) {
         return;
       }
 
-      if (IS_DEVNET) {
-        showTxError(
-          'Devnet Transaction Failed',
-          `The devnet test transaction failed. Make sure your wallet has devnet SOL.\n\nError: ${errorMsg}`,
-          'Fund with devnet SOL at https://faucet.solana.com'
-        );
-        setIsTrading(false);
-        return;
-      }
-
       // 2. Fetch balances to determine if it's an insufficient balance issue
       let isSolInsufficient = false;
       let isTokenInsufficient = false;
       let reqUiAmountText = '';
       
-      const rpcUrl = process.env.NEXT_PUBLIC_ALCHEMY_RPC_URL || 'https://api.mainnet-beta.solana.com';
+      const rpcUrl = RPC_URL;
       let freshSolBalance = balance;
       let freshTokenBalance = tokenBalance;
 
@@ -523,25 +485,6 @@ export default function TradePanel({ token }: { token: Token | null }) {
       </div>
 
       <div className="p-6 flex-1 flex flex-col">
-        {/* Devnet Banner */}
-        {IS_DEVNET && (
-          <div className="mb-4 p-3 rounded-xl bg-yellow/10 border border-yellow/30">
-            <p className="text-xs font-bold text-yellow mb-1">🧪 Devnet Mode</p>
-            <p className="text-[11px] text-yellow/70 leading-relaxed">
-              Jupiter swap is mainnet-only. On devnet, the app sends a SOL transfer test tx instead.
-              <br />
-              Get devnet SOL:{' '}
-              <a
-                href="https://faucet.solana.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="underline font-semibold hover:text-yellow"
-              >
-                faucet.solana.com
-              </a>
-            </p>
-          </div>
-        )}
         {/* Input Area */}
         <div className="relative mb-4">
           <span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl font-medium text-text-tertiary">$</span>

@@ -3,8 +3,8 @@
 :root {
   --background: #050505;
   --foreground: #f0f0f0;
-  --accent: #10B981;
-  --accent-hover: #0EA472;
+  --accent: #cf0;
+  --accent-hover: #b8db00;
   --accent-red: #EF4444;
   --surface: #111111;
   --surface-hover: #1a1a1a;
@@ -13,11 +13,27 @@
   --text-primary: #f0f0f0;
   --text-secondary: #888888;
   --text-tertiary: #555555;
-  --green: #10B981;
+  --green: #cf0;
   --red: #EF4444;
   --card-bg: rgba(17, 17, 17, 0.8);
   --glass-bg: rgba(255, 255, 255, 0.05);
   --glass-border: rgba(255, 255, 255, 0.08);
+
+  --cw-bg-app: #050505;
+  --cw-text-primary: #f0f0f0;
+  --cw-text-secondary: #888888;
+  --cw-header-bg: transparent;
+  --cw-header-text-primary: #f0f0f0;
+  --cw-header-text-secondary: #888888;
+  --cw-banner-bg: rgba(204, 255, 0, 0.06);
+  --cw-banner-text: #cf0;
+  --cw-surface: #111111;
+  --cw-border: #222222;
+  --cw-footer-bg: transparent;
+  --cw-footer-text-secondary: #888888;
+  --cw-footer-text-primary: #f0f0f0;
+  --cw-header-border: #333333;
+  --cw-hover-accent: #cf0;
 }
 
 @theme inline {
@@ -42,7 +58,6 @@
   --font-mono: var(--font-geist-mono);
 }
 
-/* Smooth scrolling */
 html {
   scroll-behavior: smooth;
 }
@@ -82,6 +97,41 @@ body {
   animation-play-state: paused;
 }
 
+/* ========== Banner marquee (cw style) ========== */
+.cw-banner-marquee {
+  display: flex;
+  animation: marquee-reverse 40s linear infinite;
+  width: max-content;
+}
+
+/* ========== Surface gradient ========== */
+.cw-surface-gradient {
+  background: linear-gradient(180deg, rgba(204, 255, 0, 0.04) 0%, transparent 100%);
+}
+
+/* ========== Mid-panel texture ========== */
+.cw-mid-panel-texture {
+  background-image: radial-gradient(rgba(204, 255, 0, 0.04) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+/* ========== Degen grid ========== */
+.cw-degen-grid {
+  background-image:
+    linear-gradient(rgba(204, 255, 0, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(204, 255, 0, 0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* ========== Screenshots banner ========== */
+.cw-screenshots-banner {
+  background: linear-gradient(180deg, transparent 0%, rgba(204, 255, 0, 0.03) 50%, transparent 100%);
+}
+
+.cw-screenshots-banner-reverse {
+  background: linear-gradient(0deg, transparent 0%, rgba(204, 255, 0, 0.03) 50%, transparent 100%);
+}
+
 /* ========== Floating animation ========== */
 @keyframes float {
   0%, 100% { transform: translateY(0); }
@@ -94,8 +144,8 @@ body {
 
 /* ========== Glow pulse ========== */
 @keyframes glow-pulse {
-  0%, 100% { box-shadow: 0 0 20px rgba(16, 185, 129, 0.15); }
-  50% { box-shadow: 0 0 40px rgba(16, 185, 129, 0.3); }
+  0%, 100% { box-shadow: 0 0 20px rgba(204, 255, 0, 0.15); }
+  50% { box-shadow: 0 0 40px rgba(204, 255, 0, 0.3); }
 }
 
 .glow-pulse {
@@ -104,7 +154,7 @@ body {
 
 /* ========== Gradient text ========== */
 .gradient-text {
-  background: linear-gradient(135deg, #10B981, #34D399, #6EE7B7);
+  background: linear-gradient(135deg, #cf0, #a0d800, #7ab800);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -142,7 +192,7 @@ body {
   background: #555;
 }
 
-/* ========== Noise overlay for premium feel ========== */
+/* ========== Noise overlay ========== */
 .noise-overlay::before {
   content: '';
   position: absolute;
@@ -152,32 +202,8 @@ body {
   z-index: 0;
 }
 
-/* ========== Hero gradient bg ========== */
-.hero-gradient {
-  background: radial-gradient(ellipse at 50% 0%, rgba(16, 185, 129, 0.12) 0%, transparent 50%),
-              radial-gradient(ellipse at 80% 50%, rgba(16, 185, 129, 0.05) 0%, transparent 40%),
-              linear-gradient(180deg, #050505 0%, #0a0a0a 100%);
-}
-
-/* ========== Feature card shimmer ========== */
-@keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-}
-
-.shimmer {
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(255, 255, 255, 0.03) 50%,
-    transparent 100%
-  );
-  background-size: 200% 100%;
-  animation: shimmer 3s ease-in-out infinite;
-}
-
 /* ========== Price change colors ========== */
-.price-up { color: #10B981; }
+.price-up { color: #cf0; }
 .price-down { color: #EF4444; }
 
 /* ========== App store badge hover ========== */
@@ -215,4 +241,3 @@ input[type="number"] {
   -moz-appearance: textfield;
   appearance: textfield;
 }
-

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import TokenLogo from './TokenLogo';
 import { getTrades, TradeRecord } from '@/app/lib/tradeHistory';
 import { timeAgo } from '@/app/lib/constants';
+import { getMainnetRpcUrl } from '@/app/lib/solanaRpc';
 
 interface TokenPrice {
   address: string;
@@ -47,7 +48,7 @@ export default function Portfolio({
     if (!walletAddress) return;
 
     async function fetchData() {
-      const rpcUrl = process.env.NEXT_PUBLIC_ALCHEMY_RPC_URL || 'https://api.mainnet-beta.solana.com';
+      const rpcUrl = getMainnetRpcUrl();
 
       // Fetch trades from Supabase
       const tradeRecords = await getTrades(walletAddress!);

@@ -8,7 +8,6 @@ ChadWallet is a premium, high-performance web dashboard for trading trending Sol
 
 *   **Social Sign-In Embedded Wallets:** Powered by **Privy**, allowing users to instantly provision a fully functional Solana wallet via Google or Apple sign-in without needing any browser extensions (e.g., Phantom).
 *   **Mainnet Swap Routing via Jupiter:** Executes token swaps using the **Jupiter Swap API v1**. Swaps are requested as **Legacy Transactions** (`asLegacyTransaction: true`) to bypass Address Lookup Table (ALT) parsing conflicts in embedded browser wallets.
-*   **Devnet Mode:** Auto-detected when the RPC URL contains `devnet`. Skips Jupiter swap (mainnet-only) and sends a SOL self-transfer test transaction instead — verifying wallet signing + RPC broadcast end-to-end.
 *   **Live Balance Polling:** Polling mechanisms query the RPC node every 15 seconds to update the user's live SOL and selected token balances directly in the UI.
 *   **Custom Status Modal Overlays:** Custom UX for transaction outcomes — success modals with Solscan links, insufficient balance popups with one-click wallet address copy, and silent rejection handling.
 *   **Portfolio Dashboard:** Holdings (on-chain balances + P&L) and History (chronological trade list) tabs, persisted to Supabase with localStorage fallback.
@@ -24,8 +23,8 @@ ChadWallet is a premium, high-performance web dashboard for trading trending Sol
 *   **Framework:** Next.js 16 (Turbopack) with App Router.
 *   **Styling:** Tailwind CSS with glassmorphism design system.
 *   **Authentication & Wallet:** Privy Solana SDK (`@privy-io/react-auth` + `@privy-io/react-auth/solana`).
-*   **On-Chain Swap Engine:** Jupiter Swap API (mainnet) / devnet self-transfer fallback.
-*   **Blockchain RPC:** Alchemy Solana RPC (HTTP) + public devnet WebSocket (`wss://api.devnet.solana.com`) for subscriptions.
+*   **On-Chain Swap Engine:** Jupiter Swap API on Solana mainnet.
+*   **Blockchain RPC:** Mainnet Solana RPC over HTTP and WebSocket subscriptions.
 *   **Data Aggregator:** BirdEye Data API (trending tokens, price history, search, and live trades).
 *   **Charts:** Financial candlestick plotting via `lightweight-charts`.
 *   **Persistence:** Supabase (PostgreSQL) with localStorage fallback.
@@ -50,7 +49,6 @@ Create a `.env.local` file in the root directory and configure the following var
 NEXT_PUBLIC_PRIVY_APP_ID=your_privy_app_id_here
 
 # Solana RPC Node (Alchemy suggested to bypass rate-limiting and CORS blocks)
-# For devnet, use: https://solana-devnet.g.alchemy.com/v2/your_alchemy_key
 NEXT_PUBLIC_ALCHEMY_RPC_URL=https://solana-mainnet.g.alchemy.com/v2/your_alchemy_api_key_here
 
 # BirdEye API Configurations (Required for real-time lists and chart routes)
@@ -83,19 +81,16 @@ npm run build
 ```mermaid
 graph TD;
   A[User enters swap amount & clicks Swap Button] --> B[Privy Wallet connection verified];
-  B --> C{Is Devnet?};
-  C -- Yes --> D[Fetch blockhash via RPC, build SOL self-transfer tx];
-  C -- No --> E[Jupiter API: get quote + swap transaction];
-  D --> F[Privy signAndSendTransaction opens Approve Popup];
-  E --> F;
-  F -- User Rejects --> G[Exit loading state silently];
-  F -- User Approves --> H[Submit to Solana Blockchain];
-  H -- Success --> I[Save trade to Supabase];
-  I --> J[Show Success Modal with Solscan Link];
-  H -- Fails --> K[Catch Block queries SOL & Token balances from RPC];
-  K -- SOL < 0.005 --> L[Show Insufficient SOL Balance Popup with Copy Address Box];
-  K -- Token Balance < Required --> M[Show Insufficient Token Balance Popup];
-  K -- Other Error --> N[Show Transaction Failed Modal];
+  B --> C[Jupiter API: get quote + swap transaction];
+  C --> D[Privy signAndSendTransaction opens Approve Popup];
+  D -- User Rejects --> E[Exit loading state silently];
+  D -- User Approves --> F[Submit to Solana Blockchain];
+  F -- Success --> G[Save trade to Supabase];
+  G --> H[Show Success Modal with Solscan Link];
+  F -- Fails --> I[Catch Block queries SOL & Token balances from RPC];
+  I -- SOL < 0.005 --> J[Show Insufficient SOL Balance Popup with Copy Address Box];
+  I -- Token Balance < Required --> K[Show Insufficient Token Balance Popup];
+  I -- Other Error --> L[Show Transaction Failed Modal];
 ```
 
 ### Route Index
@@ -110,7 +105,7 @@ graph TD;
 
 ### Key Architecture Decisions
 
-- **WebSocket Subscriptions:** Alchemy devnet does not support `signatureSubscribe` (returns `-32601`). HTTP RPC stays on Alchemy; WebSocket subscriptions use `wss://api.devnet.solana.com`.
+- **Mainnet-only RPC:** The app ignores devnet RPC URLs and falls back to `https://api.mainnet-beta.solana.com` so balances and trading stay on live Solana data.
 - **Supabase over localStorage:** Trade/user/holding data persists to Supabase via PostgREST; localStorage used as fallback when tables are missing.
 - **Sponsor Token Filtering:** BirdEye trending results filtered to tokens with liquidity ≥ $100 and volume ≥ $100 to prevent spam tokens from appearing as the default selection.
 - **Mobile Layout:** Single-panel view with bottom tab bar replaces the three-column desktop layout on mobile.

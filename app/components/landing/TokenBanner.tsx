@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { formatPrice, formatPercentChange, KNOWN_TOKENS } from '@/app/lib/constants';
+import { formatPrice, formatPercentChange } from '@/app/lib/constants';
 
 interface BannerToken {
   address: string;
@@ -28,25 +28,10 @@ export default function TokenBanner({ direction = 'left' }: TokenBannerProps) {
         const data = await res.json();
         if (data.tokens && data.tokens.length > 0) {
           setTokens(data.tokens);
-        } else {
-          setFallbackTokens();
         }
       } catch {
-        setFallbackTokens();
+        setTokens([]);
       }
-    }
-
-    function setFallbackTokens() {
-      setTokens(
-        KNOWN_TOKENS.map((t) => ({
-          address: t.address,
-          symbol: t.symbol,
-          name: t.name,
-          logoURI: t.logoURI,
-          price: Math.random() * 200,
-          priceChange24h: (Math.random() - 0.4) * 40,
-        }))
-      );
     }
 
     fetchTokens();
@@ -54,44 +39,41 @@ export default function TokenBanner({ direction = 'left' }: TokenBannerProps) {
 
   if (tokens.length === 0) {
     return (
-      <div className="h-14 bg-surface/50 animate-pulse" />
+      <div className="h-14 animate-pulse" style={{ backgroundColor: 'rgba(204, 255, 0, 0.04)' }} />
     );
   }
 
-  // Duplicate tokens for seamless loop
   const displayTokens = [...tokens, ...tokens];
 
   return (
-    <div className="relative overflow-hidden bg-surface/50 border-y border-border">
-      <div className={direction === 'left' ? 'marquee-track' : 'marquee-track-reverse'}>
+    <div className="relative overflow-hidden bg-[#cf0] text-black">
+      <div className={direction === 'left' ? 'marquee-track-reverse' : 'marquee-track'}>
         {displayTokens.map((token, i) => (
           <Link
             key={`${token.address}-${i}`}
             href={`/trade/${token.address}`}
-            className="flex items-center gap-3 px-5 py-3 hover:bg-white/5 transition-colors cursor-pointer shrink-0"
+            className="flex shrink-0 items-center gap-2 px-3 py-2 transition-colors hover:opacity-75"
+            style={{ color: 'var(--cw-banner-text)' }}
           >
             {token.logoURI ? (
               <Image
                 src={token.logoURI}
                 alt={token.symbol}
-                width={28}
-                height={28}
-                className="rounded-full"
+                width={24}
+                height={24}
+                className="rounded-full border border-black/10 object-cover"
                 unoptimized
               />
             ) : (
-              <div className="w-7 h-7 rounded-full bg-accent/20 flex items-center justify-center text-xs font-bold text-accent">
+              <div className="flex h-6 w-6 items-center justify-center rounded-full border border-black/10 bg-black/20 text-xs font-bold object-cover">
                 {token.symbol.charAt(0)}
               </div>
             )}
-            <span className="font-semibold text-sm whitespace-nowrap">{token.symbol}</span>
-            <span className="text-text-secondary text-sm whitespace-nowrap">{formatPrice(token.price)}</span>
+            <span className="font-black uppercase text-black">${token.symbol}</span>
             <span
-              className={`text-xs font-medium whitespace-nowrap ${
-                token.priceChange24h >= 0 ? 'text-green' : 'text-red'
-              }`}
+              className={`whitespace-nowrap font-bold text-black`}
             >
-              {formatPercentChange(token.priceChange24h)}
+              {token.priceChange24h >= 0 ? '+' : ''}{formatPercentChange(token.priceChange24h)}
             </span>
           </Link>
         ))}

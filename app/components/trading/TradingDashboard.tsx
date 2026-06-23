@@ -11,6 +11,7 @@ import TokenInfo from './TokenInfo';
 import TradePanel from './TradePanel';
 import Portfolio from './Portfolio';
 import { upsertUser } from '@/app/lib/tradeHistory';
+import { getMainnetRpcUrl } from '@/app/lib/solanaRpc';
 
 interface Token {
   address: string;
@@ -61,7 +62,7 @@ export default function TradingDashboard({ initialAddress }: { initialAddress?: 
     async function fetchSolBalance() {
       setSolBalanceLoading(true);
       try {
-        const rpcUrl = process.env.NEXT_PUBLIC_ALCHEMY_RPC_URL || 'https://api.mainnet-beta.solana.com';
+        const rpcUrl = getMainnetRpcUrl();
         const res = await fetch(rpcUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -103,31 +104,15 @@ export default function TradingDashboard({ initialAddress }: { initialAddress?: 
             setSelectedToken(data.tokens[0]);
           }
         } else {
-          setFallbackTokens();
+          setTokens([]);
+          setSelectedToken(null);
         }
       } catch {
-        console.error('Failed to fetch tokens, using fallback');
-        setFallbackTokens();
+        console.error('Failed to fetch live tokens');
+        setTokens([]);
+        setSelectedToken(null);
       }
       setTokensLoading(false);
-    }
-
-    function setFallbackTokens() {
-      import('@/app/lib/constants').then(({ KNOWN_TOKENS }) => {
-        const fallback = KNOWN_TOKENS.map((t) => ({
-          address: t.address,
-          symbol: t.symbol,
-          name: t.name,
-          logoURI: t.logoURI,
-          price: Math.random() * 200,
-          priceChange24h: (Math.random() - 0.4) * 40,
-          volume24h: Math.random() * 10000000,
-          marketCap: Math.random() * 100000000,
-        }));
-        setTokens(fallback);
-        setSelectedToken(fallback.find((t) => t.address === initialAddress) || fallback[0]);
-        setTokensLoading(false);
-      });
     }
     
     fetchTokens();

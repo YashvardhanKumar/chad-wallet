@@ -117,6 +117,15 @@ export default function TrendingList({ tokens, selectedAddress, onSelect, onLoad
           </div>
         )}
 
+        {!isLoading && tokens.length === 0 && (
+          <div className="px-5 py-10 text-center">
+            <div className="text-sm font-semibold text-white">Live tokens unavailable</div>
+            <div className="mt-2 text-xs leading-5 text-text-tertiary">
+              Connect BirdEye to load real-time Solana market data.
+            </div>
+          </div>
+        )}
+
         {isLoadingMore && (
           <div className="py-4 flex justify-center">
             <div className="w-5 h-5 border-2 border-accent border-t-transparent rounded-full animate-spin"></div>
