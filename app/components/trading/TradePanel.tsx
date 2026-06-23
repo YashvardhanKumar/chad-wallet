@@ -90,7 +90,7 @@ export default function TradePanel({ token }: { token: Token | null }) {
     });
   };
 
-  const presets = ['$25', '$50', '$100', '$250'];
+  const presets = mode === 'buy' ? ['$25', '$50', '$100', '$250'] : ['25%', '50%', '75%', 'Max'];
 
   // Extract wallet address for static dependency checking
   const walletAddress = wallets[0]?.address;
@@ -171,10 +171,19 @@ export default function TradePanel({ token }: { token: Token | null }) {
   }
 
   const handlePreset = (value: string) => {
-    setAmount(value.replace('$', ''));
+    if (mode === 'buy') {
+      setAmount(value.replace('$', ''));
+    } else {
+      if (value === 'Max') {
+        setAmount(tokenBalance?.toString() || '0');
+      } else {
+        const pct = parseInt(value) / 100;
+        setAmount(((tokenBalance || 0) * pct).toFixed(6));
+      }
+    }
   };
 
-  const getAmountLamports = async (usdAmount: number, tokenAddress: string, decimalsDefault = 9): Promise<{ amount: number; symbol: string }> => {
+  const getAmountLamports = async (usdAmount: number, tokenAddress: string, decimalsDefault = 9): Promise<{ amount: number; symbol: string; decimals: number }> => {
     try {
       const res = await fetch(`https://api.jup.ag/price/v3?ids=${tokenAddress}`);
       const data = await res.json();
@@ -186,6 +195,7 @@ export default function TradePanel({ token }: { token: Token | null }) {
         return {
           amount: Math.floor(tokenAmount * Math.pow(10, decimals)),
           symbol: tokenInfo.symbol || '',
+          decimals,
         };
       }
     } catch (e) {
@@ -196,7 +206,22 @@ export default function TradePanel({ token }: { token: Token | null }) {
     return {
       amount: Math.floor(tokenAmount * Math.pow(10, decimalsDefault)),
       symbol: token?.symbol || '',
+      decimals: decimalsDefault,
     };
+  };
+
+  const getTokenDecimals = async (tokenAddress: string, decimalsDefault = 9): Promise<number> => {
+    try {
+      const res = await fetch(`https://api.jup.ag/price/v3?ids=${tokenAddress}`);
+      const data = await res.json();
+      const tokenInfo = data[tokenAddress];
+      if (tokenInfo) {
+        return tokenInfo.decimals ?? decimalsDefault;
+      }
+    } catch (e) {
+      console.error('Failed to get token decimals from Jupiter:', e);
+    }
+    return decimalsDefault;
   };
 
   const handleTrade = async () => {
@@ -231,8 +256,9 @@ export default function TradePanel({ token }: { token: Token | null }) {
         const { amount: computedAmount } = await getAmountLamports(usdAmount, SOL_MINT, 9);
         amountLamports = computedAmount;
       } else {
-        const { amount: computedAmount } = await getAmountLamports(usdAmount, token.address, 9);
-        amountLamports = computedAmount;
+        const tokenAmount = parseFloat(amount);
+        const decimals = await getTokenDecimals(token.address, 9);
+        amountLamports = Math.floor(tokenAmount * Math.pow(10, decimals));
       }
 
       // 1. Get Quote from Jupiter
@@ -273,7 +299,9 @@ export default function TradePanel({ token }: { token: Token | null }) {
         options: {
           skipPreflight: true,
           uiOptions: {
-            description: `${mode === 'buy' ? 'Swap' : 'Swap'} $${amount} ${mode === 'buy' ? 'SOL →' : '→ SOL'} ${token.symbol}`,
+            description: mode === 'buy'
+              ? `Swap $${amount} SOL → ${token.symbol}`
+              : `Swap ${amount} ${token.symbol} → SOL`,
             transactionInfo: {
               title: 'Swap Details',
               action: `${mode === 'buy' ? 'Buy' : 'Sell'} ${token.symbol}`,
@@ -409,12 +437,11 @@ export default function TradePanel({ token }: { token: Token | null }) {
           }
 
           if (mode === 'sell') {
-            const usdAmount = parseFloat(amount);
-            const { amount: computedAmount } = await getAmountLamports(usdAmount, token.address, decimals);
+            const tokenAmount = parseFloat(amount);
+            const computedAmount = Math.floor(tokenAmount * Math.pow(10, decimals));
             if (rawTokenBalance < computedAmount) {
               isTokenInsufficient = true;
-              const reqUiAmount = computedAmount / Math.pow(10, decimals);
-              reqUiAmountText = `${reqUiAmount.toLocaleString('en-US', { maximumFractionDigits: 6 })} ${token.symbol}`;
+              reqUiAmountText = `${tokenAmount.toLocaleString('en-US', { maximumFractionDigits: 6 })} ${token.symbol}`;
             }
           }
         }
@@ -487,15 +514,17 @@ export default function TradePanel({ token }: { token: Token | null }) {
       <div className="p-6 flex-1 flex flex-col">
         {/* Input Area */}
         <div className="relative mb-4">
-          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl font-medium text-text-tertiary">$</span>
+          {mode === 'buy' ? (
+            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl font-medium text-text-tertiary">$</span>
+          ) : null}
           <input
             type="number"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             placeholder="0"
-            className="w-full bg-background border border-border/50 rounded-xl px-4 pl-10 py-5 text-3xl font-medium text-white focus:outline-none focus:border-accent transition-colors placeholder:text-text-tertiary/50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+            className={`w-full bg-background border border-border/50 rounded-xl px-4 py-5 text-3xl font-medium text-white focus:outline-none focus:border-accent transition-colors placeholder:text-text-tertiary/50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${mode === 'buy' ? 'pl-10' : ''}`}
           />
-          <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-medium text-text-secondary">Enter amount</span>
+          <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-medium text-text-secondary">{mode === 'buy' ? 'Enter amount' : token.symbol}</span>
         </div>
 
         {/* Presets */}
