@@ -495,7 +495,7 @@ export default function TradePanel({ token }: { token: Token | null }) {
       <div className="flex border-b border-border/50">
         <button
           onClick={() => setMode('buy')}
-          className={`flex-1 py-4 font-bold text-sm transition-all duration-200 border-b-2 ${
+            className={`flex-1 py-4 font-bold text-sm transition-all duration-200 border-b-2 backdrop-blur-md ${
             mode === 'buy' ? 'border-green text-green bg-green/5' : 'border-transparent text-text-secondary hover:bg-white/5'
           }`}
         >
@@ -503,7 +503,7 @@ export default function TradePanel({ token }: { token: Token | null }) {
         </button>
         <button
           onClick={() => setMode('sell')}
-          className={`flex-1 py-4 font-bold text-sm transition-all duration-200 border-b-2 ${
+            className={`flex-1 py-4 font-bold text-sm transition-all duration-200 border-b-2 backdrop-blur-md ${
             mode === 'sell' ? 'border-red text-red bg-red/5' : 'border-transparent text-text-secondary hover:bg-white/5'
           }`}
         >
@@ -533,12 +533,12 @@ export default function TradePanel({ token }: { token: Token | null }) {
             <button
               key={preset}
               onClick={() => handlePreset(preset)}
-              className="flex-1 py-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors text-sm font-semibold text-white"
+              className="flex-1 py-2 rounded-lg bg-white/5 hover:bg-white/10 backdrop-blur-md transition-colors text-sm font-semibold text-white"
             >
               {preset}
             </button>
           ))}
-          <button className="p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors text-text-secondary flex items-center justify-center px-3">
+          <button className="p-2 rounded-lg bg-white/5 hover:bg-white/10 backdrop-blur-md transition-colors text-text-secondary flex items-center justify-center px-3">
              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
           </button>
         </div>
@@ -561,7 +561,7 @@ export default function TradePanel({ token }: { token: Token | null }) {
           <button
             onClick={handleTrade}
             disabled={isTrading}
-            className={`w-full py-4 rounded-xl font-bold text-[15px] transition-all duration-200 disabled:opacity-50 ${
+            className={`w-full py-4 rounded-xl font-bold text-[15px] backdrop-blur-md transition-all duration-200 disabled:opacity-50 ${
               mode === 'buy' ? 'bg-white/10 hover:bg-white/20 text-white' : 'bg-red/10 hover:bg-red/20 text-red'
             }`}
           >

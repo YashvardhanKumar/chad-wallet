@@ -62,7 +62,7 @@ export default function TrendingList({ tokens, selectedAddress, onSelect, onLoad
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`text-[11px] px-2.5 py-1 rounded-md transition-colors ${
+              className={`text-[11px] px-2.5 py-1 rounded-md backdrop-blur-md transition-colors ${
                 activeTab === tab
                   ? 'bg-white/10 text-white font-medium'
                   : 'text-text-tertiary hover:text-text-secondary hover:bg-white/5 font-medium'

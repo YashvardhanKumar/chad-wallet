@@ -1,38 +1,40 @@
 @import "tailwindcss";
 
 :root {
-  --background: #050505;
-  --foreground: #f0f0f0;
+  /* Core palette - deep space with neon green ChadWallet accent */
+  --background: #060510;
+  --foreground: #EAEDFF;
   --accent: #cf0;
   --accent-hover: #b8db00;
   --accent-red: #EF4444;
-  --surface: #111111;
-  --surface-hover: #1a1a1a;
-  --border: #222222;
-  --border-hover: #333333;
-  --text-primary: #f0f0f0;
-  --text-secondary: #888888;
-  --text-tertiary: #555555;
+  --surface: #0D0D1A;
+  --surface-hover: #14142B;
+  --border: rgba(255, 255, 255, 0.06);
+  --border-hover: rgba(255, 255, 255, 0.12);
+  --text-primary: #EAEDFF;
+  --text-secondary: rgba(234, 237, 255, 0.6);
+  --text-tertiary: rgba(234, 237, 255, 0.4);
   --green: #cf0;
   --red: #EF4444;
-  --card-bg: rgba(17, 17, 17, 0.8);
-  --glass-bg: rgba(255, 255, 255, 0.05);
-  --glass-border: rgba(255, 255, 255, 0.08);
+  --card-bg: #0D0D1A;
+  --glass-bg: rgba(255, 255, 255, 0.04);
+  --glass-border: rgba(255, 255, 255, 0.06);
 
-  --cw-bg-app: #050505;
-  --cw-text-primary: #f0f0f0;
-  --cw-text-secondary: #888888;
+  /* CW design tokens */
+  --cw-bg-app: #060510;
+  --cw-text-primary: #EAEDFF;
+  --cw-text-secondary: rgba(234, 237, 255, 0.6);
   --cw-header-bg: transparent;
-  --cw-header-text-primary: #f0f0f0;
-  --cw-header-text-secondary: #888888;
+  --cw-header-text-primary: #EAEDFF;
+  --cw-header-text-secondary: rgba(234, 237, 255, 0.6);
   --cw-banner-bg: rgba(204, 255, 0, 0.06);
   --cw-banner-text: #cf0;
-  --cw-surface: #111111;
-  --cw-border: #222222;
+  --cw-surface: #0D0D1A;
+  --cw-border: rgba(255, 255, 255, 0.06);
   --cw-footer-bg: transparent;
-  --cw-footer-text-secondary: #888888;
-  --cw-footer-text-primary: #f0f0f0;
-  --cw-header-border: #333333;
+  --cw-footer-text-secondary: rgba(234, 237, 255, 0.4);
+  --cw-footer-text-primary: #EAEDFF;
+  --cw-header-border: rgba(255, 255, 255, 0.08);
   --cw-hover-accent: #cf0;
 }
 
@@ -97,52 +99,40 @@ body {
   animation-play-state: paused;
 }
 
-/* ========== Banner marquee (cw style) ========== */
-.cw-banner-marquee {
-  display: flex;
-  animation: marquee-reverse 40s linear infinite;
-  width: max-content;
-}
-
-/* ========== Surface gradient ========== */
-.cw-surface-gradient {
-  background: linear-gradient(180deg, rgba(204, 255, 0, 0.04) 0%, transparent 100%);
-}
-
-/* ========== Mid-panel texture ========== */
-.cw-mid-panel-texture {
-  background-image: radial-gradient(rgba(204, 255, 0, 0.04) 1px, transparent 1px);
-  background-size: 20px 20px;
-}
-
-/* ========== Degen grid ========== */
-.cw-degen-grid {
-  background-image:
-    linear-gradient(rgba(204, 255, 0, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(204, 255, 0, 0.03) 1px, transparent 1px);
-  background-size: 40px 40px;
-}
-
-/* ========== Screenshots banner ========== */
-.cw-screenshots-banner {
-  background: linear-gradient(180deg, transparent 0%, rgba(204, 255, 0, 0.03) 50%, transparent 100%);
-}
-
-.cw-screenshots-banner-reverse {
-  background: linear-gradient(0deg, transparent 0%, rgba(204, 255, 0, 0.03) 50%, transparent 100%);
-}
-
-/* ========== Floating animation ========== */
+/* ========== Floating animation (fomo-style) ========== */
 @keyframes float {
   0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-15px); }
+  50% { transform: translateY(-20px); }
 }
 
 .animate-float {
-  animation: float 6s ease-in-out infinite;
+  animation: float 4s ease-in-out infinite;
 }
 
-/* ========== Glow pulse ========== */
+.animate-float-slow {
+  animation: float 10s ease-in-out infinite;
+}
+
+/* ========== Spin animation for orbit circles ========== */
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes spin-slow-reverse {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(-360deg); }
+}
+
+.animate-spin-slow {
+  animation: spin-slow 45s linear infinite;
+}
+
+.animate-spin-slow-reverse {
+  animation: spin-slow-reverse 30s linear infinite;
+}
+
+/* ========== Glow pulse (ChadWallet green) ========== */
 @keyframes glow-pulse {
   0%, 100% { box-shadow: 0 0 20px rgba(204, 255, 0, 0.15); }
   50% { box-shadow: 0 0 40px rgba(204, 255, 0, 0.3); }
@@ -229,6 +219,65 @@ body {
 
 .fade-in-up {
   animation: fade-in-up 0.6s ease-out forwards;
+}
+
+/* ========== Feature card (fomo-style) ========== */
+.feature-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 25px;
+  overflow: hidden;
+  transition: border-color 0.3s ease;
+}
+
+.feature-card:hover {
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.feature-card img {
+  transition: transform 0.3s ease;
+}
+
+.feature-card:hover img {
+  transform: scale(1.05);
+}
+
+/* ========== CTA buttons (fomo-style glass with backdrop blur) ========== */
+.cta-primary {
+  background: rgba(204, 255, 0, 0.5);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.15s ease;
+}
+
+.cta-primary:hover {
+  background: rgba(204, 255, 0, 0.75);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  box-shadow: 0 0 20px rgba(204, 255, 0, 0.15);
+}
+
+.cta-secondary {
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.15s ease;
+}
+
+.cta-secondary:hover {
+  background: rgba(255, 255, 255, 0.20);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* ========== Starfield shimmer ========== */
+@keyframes shimmer {
+  0% { opacity: 0.3; }
+  50% { opacity: 1; }
+  100% { opacity: 0.3; }
 }
 
 /* Remove up/down arrows from number inputs */

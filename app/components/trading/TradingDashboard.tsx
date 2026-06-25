@@ -285,13 +285,13 @@ export default function TradingDashboard({ initialAddress }: { initialAddress?: 
                           login();
                         }
                       }}
-                      className="bg-red-500/20 hover:bg-red-500/30 text-red-400 font-semibold px-3 py-1.5 rounded-lg text-xs border border-red-500/30 transition-colors cursor-pointer"
+                      className="bg-red-500/20 hover:bg-red-500/30 backdrop-blur-md text-red-400 font-semibold px-3 py-1.5 rounded-lg text-xs border border-red-500/30 transition-colors cursor-pointer"
                     >
                       Create wallet
                     </button>
                     <button
                       onClick={() => setShowPortfolio(true)}
-                      className="hidden lg:flex text-xs text-accent hover:text-accent-hover px-2 py-1.5 rounded-lg bg-accent/10 hover:bg-accent/20 transition-colors font-semibold items-center gap-1"
+                      className="hidden lg:flex text-xs text-accent hover:text-accent-hover px-2 py-1.5 rounded-lg bg-accent/10 hover:bg-accent/20 backdrop-blur-md transition-colors font-semibold items-center gap-1"
                     >
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
@@ -300,7 +300,7 @@ export default function TradingDashboard({ initialAddress }: { initialAddress?: 
                     </button>
                     <button
                       onClick={logout}
-                      className="text-xs text-red-400 hover:text-red-300 px-2 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 transition-colors font-semibold flex items-center gap-1"
+                      className="text-xs text-red-400 hover:text-red-300 px-2 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 backdrop-blur-md transition-colors font-semibold flex items-center gap-1"
                     >
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
@@ -318,7 +318,7 @@ export default function TradingDashboard({ initialAddress }: { initialAddress?: 
                     </div>
                     <button
                       onClick={() => setShowPortfolio(true)}
-                      className="hidden lg:flex text-xs text-accent hover:text-accent-hover px-2 py-1.5 rounded-lg bg-accent/10 hover:bg-accent/20 transition-colors font-semibold items-center gap-1"
+                      className="hidden lg:flex text-xs text-accent hover:text-accent-hover px-2 py-1.5 rounded-lg bg-accent/10 hover:bg-accent/20 backdrop-blur-md transition-colors font-semibold items-center gap-1"
                     >
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
@@ -327,7 +327,7 @@ export default function TradingDashboard({ initialAddress }: { initialAddress?: 
                     </button>
                     <button
                       onClick={logout}
-                      className="text-xs text-red-400 hover:text-red-300 px-2 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 transition-colors font-semibold flex items-center gap-1"
+                      className="text-xs text-red-400 hover:text-red-300 px-2 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 backdrop-blur-md transition-colors font-semibold flex items-center gap-1"
                     >
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
@@ -342,7 +342,7 @@ export default function TradingDashboard({ initialAddress }: { initialAddress?: 
             ) : (
               <button
                 onClick={login}
-                className="bg-accent hover:bg-accent-hover text-black font-semibold px-4 py-1.5 rounded-lg text-sm transition-colors"
+                className="bg-accent hover:bg-accent-hover text-black font-semibold px-4 py-1.5 rounded-lg text-sm transition-colors backdrop-blur-md"
               >
                 Connect Wallet
               </button>
@@ -380,7 +380,7 @@ export default function TradingDashboard({ initialAddress }: { initialAddress?: 
                       setSearchQuery('');
                       setShowMobileSearch(false);
                     }}
-                    className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-white/5 transition-colors text-left border-b border-border/50 last:border-0"
+                    className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-white/5 backdrop-blur-md transition-colors text-left border-b border-border/50 last:border-0"
                   >
                     <TokenLogo token={token} size={24} />
                     <div className="flex-1 min-w-0">
@@ -410,7 +410,7 @@ export default function TradingDashboard({ initialAddress }: { initialAddress?: 
             <span className="font-semibold text-sm text-white">Tokens</span>
             <button
               onClick={() => setShowMobileTokens(false)}
-              className="p-1 text-text-tertiary hover:text-white"
+              className="p-1 text-text-tertiary hover:text-white backdrop-blur-md"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
@@ -474,7 +474,7 @@ export default function TradingDashboard({ initialAddress }: { initialAddress?: 
       <div className="lg:hidden flex border-t border-border bg-surface">
         <button
           onClick={() => setMobileTab('chart')}
-          className={`flex-1 flex flex-col items-center gap-0.5 py-2 text-xs font-medium transition-colors ${
+          className={`flex-1 flex flex-col items-center gap-0.5 py-2 text-xs font-medium backdrop-blur-md transition-colors ${
             mobileTab === 'chart'
               ? 'text-accent border-t-2 border-accent -mt-px'
               : 'text-text-tertiary hover:text-white'
@@ -487,7 +487,7 @@ export default function TradingDashboard({ initialAddress }: { initialAddress?: 
         </button>
         <button
           onClick={() => setMobileTab('trade')}
-          className={`flex-1 flex flex-col items-center gap-0.5 py-2 text-xs font-medium transition-colors ${
+          className={`flex-1 flex flex-col items-center gap-0.5 py-2 text-xs font-medium backdrop-blur-md transition-colors ${
             mobileTab === 'trade'
               ? 'text-accent border-t-2 border-accent -mt-px'
               : 'text-text-tertiary hover:text-white'
@@ -500,7 +500,7 @@ export default function TradingDashboard({ initialAddress }: { initialAddress?: 
         </button>
         <button
           onClick={() => setMobileTab('portfolio')}
-          className={`flex-1 flex flex-col items-center gap-0.5 py-2 text-xs font-medium transition-colors ${
+          className={`flex-1 flex flex-col items-center gap-0.5 py-2 text-xs font-medium backdrop-blur-md transition-colors ${
             mobileTab === 'portfolio'
               ? 'text-accent border-t-2 border-accent -mt-px'
               : 'text-text-tertiary hover:text-white'

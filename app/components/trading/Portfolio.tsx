@@ -135,7 +135,7 @@ export default function Portfolio({
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
         <h2 className="font-bold text-sm text-white">Portfolio</h2>
-        <button onClick={onClose} className="p-1 text-text-tertiary hover:text-white">
+        <button onClick={onClose} className="p-1 text-text-tertiary hover:text-white backdrop-blur-md">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
           </svg>
@@ -146,7 +146,7 @@ export default function Portfolio({
       <div className="flex border-b border-border shrink-0">
         <button
           onClick={() => setTab('holdings')}
-          className={`flex-1 py-2.5 text-xs font-semibold transition-colors ${
+          className={`flex-1 py-2.5 text-xs font-semibold backdrop-blur-md transition-colors ${
             tab === 'holdings' ? 'text-accent border-b-2 border-accent' : 'text-text-tertiary hover:text-white'
           }`}
         >
@@ -154,7 +154,7 @@ export default function Portfolio({
         </button>
         <button
           onClick={() => setTab('history')}
-          className={`flex-1 py-2.5 text-xs font-semibold transition-colors ${
+          className={`flex-1 py-2.5 text-xs font-semibold backdrop-blur-md transition-colors ${
             tab === 'history' ? 'text-accent border-b-2 border-accent' : 'text-text-tertiary hover:text-white'
           }`}
         >
@@ -213,7 +213,7 @@ export default function Portfolio({
                 <button
                   key={h.mint}
                   onClick={() => onSelectToken(h.mint)}
-                  className="w-full flex items-center justify-between py-2 px-1 hover:bg-white/5 rounded-lg transition-colors text-left"
+                  className="w-full flex items-center justify-between py-2 px-1 hover:bg-white/5 backdrop-blur-md rounded-lg transition-colors text-left"
                 >
                   <div className="flex items-center gap-2 min-w-0">
                     <TokenLogo token={{ address: h.mint, symbol: h.symbol, logoURI: h.logoURI || undefined }} size={28} />

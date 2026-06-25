@@ -359,7 +359,7 @@ export default function TokenInfo({ token }: { token: Token }) {
               <button
                 key={range}
                 onClick={() => setTimeRange(range)}
-                className={`text-[10px] lg:text-[11px] px-1.5 lg:px-2 py-1 rounded font-medium transition-colors ${
+                className={`text-[10px] lg:text-[11px] px-1.5 lg:px-2 py-1 rounded font-medium backdrop-blur-md transition-colors ${
                   timeRange === range ? 'bg-white/10 text-white' : 'text-text-tertiary hover:text-text-secondary hover:bg-white/5'
                 }`}
               >
@@ -431,7 +431,7 @@ export default function TokenInfo({ token }: { token: Token }) {
                       </div>
                     </td>
                     <td className="py-3">
-                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${t.side === 'buy' ? 'bg-green/20 text-green' : 'bg-red/20 text-red'}`}>
+                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded backdrop-blur-md ${t.side === 'buy' ? 'bg-green/20 text-green' : 'bg-red/20 text-red'}`}>
                         {t.side.toUpperCase()}
                       </span>
                     </td>
@@ -450,13 +450,13 @@ export default function TokenInfo({ token }: { token: Token }) {
           <div className="flex items-center gap-4 px-4 py-3 border-b border-border/50">
             <button 
               onClick={() => setBottomTab('Trades')} 
-              className={`font-semibold text-sm transition-colors ${bottomTab === 'Trades' ? 'text-white' : 'text-text-tertiary hover:text-text-secondary'}`}
+              className={`font-semibold text-sm backdrop-blur-md transition-colors ${bottomTab === 'Trades' ? 'text-white' : 'text-text-tertiary hover:text-text-secondary'}`}
             >
               Recent Swaps
             </button>
             <button 
               onClick={() => setBottomTab('Thesis')} 
-              className={`font-semibold text-sm transition-colors ${bottomTab === 'Thesis' ? 'text-white' : 'text-text-tertiary hover:text-text-secondary'}`}
+              className={`font-semibold text-sm backdrop-blur-md transition-colors ${bottomTab === 'Thesis' ? 'text-white' : 'text-text-tertiary hover:text-text-secondary'}`}
             >
               User Thesis
             </button>
@@ -495,7 +495,7 @@ export default function TokenInfo({ token }: { token: Token }) {
                         </div>
                       </td>
                       <td className="py-2.5">
-                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${t.side === 'buy' ? 'bg-green/20 text-green' : 'bg-red/20 text-red'}`}>
+                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded backdrop-blur-md ${t.side === 'buy' ? 'bg-green/20 text-green' : 'bg-red/20 text-red'}`}>
                           {t.side.toUpperCase()}
                         </span>
                       </td>

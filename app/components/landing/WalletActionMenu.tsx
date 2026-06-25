@@ -35,7 +35,7 @@ export default function WalletActionMenu() {
               <MenuItem>
                 <Link
                   href="/rewards"
-                  className="group flex w-full items-center gap-2 rounded-lg px-3 py-2 data-[focus]:bg-white/10"
+                  className="group flex w-full items-center gap-2 rounded-lg px-3 py-2 data-[focus]:bg-white/10 backdrop-blur-md"
                 >
                   Rewards
                 </Link>
@@ -43,7 +43,7 @@ export default function WalletActionMenu() {
               <MenuItem>
                 <button
                   onClick={logout}
-                  className="group flex w-full items-center gap-2 rounded-lg px-3 py-2 data-[focus]:bg-white/10"
+                  className="group flex w-full items-center gap-2 rounded-lg px-3 py-2 data-[focus]:bg-white/10 backdrop-blur-md"
                 >
                   Logout
                 </button>
@@ -53,7 +53,7 @@ export default function WalletActionMenu() {
             <MenuItem>
               <button
                 onClick={login}
-                className="group flex w-full items-center gap-2 rounded-lg px-3 py-2 data-[focus]:bg-white/10"
+                className="group flex w-full items-center gap-2 rounded-lg px-3 py-2 data-[focus]:bg-white/10 backdrop-blur-md"
               >
                 Login
               </button>
