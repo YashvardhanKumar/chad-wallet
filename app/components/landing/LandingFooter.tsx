@@ -5,64 +5,58 @@ export default function LandingFooter() {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="px-10 pt-8 pb-12 flex flex-col min-[800px]:flex-row gap-10 items-start justify-between max-w-[1400px] mx-auto w-full">
-      {/* Left column: logo + tagline + copyright */}
+    <footer className="px-10 pt-8 pb-12 flex flex-col desktop:flex-row gap-10 items-start justify-between max-w-[1400px] mx-auto w-full">
       <div className="flex flex-col gap-6">
         <div className="flex flex-col gap-3">
           <Link
             aria-label="ChadWallet home"
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 text-text-primary"
             href="/"
           >
             <Image
               src="/images/logo-light.png"
               alt="ChadWallet"
-              width={40}
-              height={40}
-              className="h-8 w-8 rounded-lg"
+              width={30}
+              height={30}
+              className="h-7 w-7 rounded-lg"
             />
             <span className="text-xl font-black tracking-tight">ChadWallet</span>
           </Link>
-          <div className="text-2xl text-[var(--cw-text-secondary)] leading-7 tracking-tighter">
+          <div className="text-2xl text-text-secondary leading-7 tracking-tighter">
             where degens become legends.
           </div>
         </div>
-        <div className="text-[var(--cw-footer-text-secondary)] hidden min-[800px]:block">
+        <div className="text-text-tertiary hidden desktop:block">
           © {year} ChadWallet
         </div>
       </div>
 
-      {/* Right columns: links */}
-      <div className="flex items-start flex-col min-[800px]:flex-row gap-8 min-[800px]:gap-16">
+      <div className="flex items-start flex-col desktop:flex-row gap-8 desktop:gap-2">
         <div className="flex flex-col items-start gap-2 min-w-40">
-          <div className="text-[var(--cw-footer-text-secondary)] font-mono text-sm tracking-wider">
-            SOCIAL
-          </div>
-          <a
-            href="https://x.com/chadwallet"
-            className="text-sm hover:text-[var(--cw-text-primary)] text-[var(--cw-footer-text-secondary)] transition-colors"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            X / Twitter
-          </a>
+          <div className="text-text-tertiary font-mono text-sm tracking-wider">SOCIAL</div>
           <a
             href="https://discord.gg/mdCjtyZ8G"
-            className="text-sm hover:text-[var(--cw-text-primary)] text-[var(--cw-footer-text-secondary)] transition-colors"
+            className="text-sm hover:text-text-secondary text-text-tertiary transition-colors"
             target="_blank"
             rel="noopener noreferrer"
           >
             Discord
           </a>
+          <a
+            href="https://x.com/chadwallet"
+            className="text-sm hover:text-text-secondary text-text-tertiary transition-colors"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            X/Twitter
+          </a>
         </div>
 
         <div className="flex flex-col items-start gap-2 min-w-40">
-          <div className="text-[var(--cw-footer-text-secondary)] font-mono text-sm tracking-wider">
-            DOWNLOAD
-          </div>
+          <div className="text-text-tertiary font-mono text-sm tracking-wider">DOWNLOAD</div>
           <a
             href="https://apps.apple.com/us/app/chadwallet/id6757367474"
-            className="text-sm hover:text-[var(--cw-text-primary)] text-[var(--cw-footer-text-secondary)] transition-colors"
+            className="text-sm hover:text-text-secondary text-text-tertiary transition-colors"
             target="_blank"
             rel="noopener noreferrer"
           >
@@ -70,7 +64,7 @@ export default function LandingFooter() {
           </a>
           <a
             href="https://play.google.com/store/apps/details?id=xyz.chadwallet.www"
-            className="text-sm hover:text-[var(--cw-text-primary)] text-[var(--cw-footer-text-secondary)] transition-colors"
+            className="text-sm hover:text-text-secondary text-text-tertiary transition-colors"
             target="_blank"
             rel="noopener noreferrer"
           >
@@ -79,17 +73,15 @@ export default function LandingFooter() {
         </div>
 
         <div className="flex flex-col items-start gap-2 min-w-40">
-          <div className="text-[var(--cw-footer-text-secondary)] font-mono text-sm tracking-wider">
-            LEGAL
-          </div>
+          <div className="text-text-tertiary font-mono text-sm tracking-wider">LEGAL</div>
           <Link
-            className="text-sm hover:text-[var(--cw-text-primary)] text-[var(--cw-footer-text-secondary)] transition-colors"
+            className="text-sm hover:text-text-secondary text-text-tertiary transition-colors"
             href="/privacy"
           >
             Privacy Policy
           </Link>
           <Link
-            className="text-sm hover:text-[var(--cw-text-primary)] text-[var(--cw-footer-text-secondary)] transition-colors"
+            className="text-sm hover:text-text-secondary text-text-tertiary transition-colors"
             href="/terms"
           >
             Terms of Service
@@ -97,8 +89,7 @@ export default function LandingFooter() {
         </div>
       </div>
 
-      {/* Mobile copyright */}
-      <div className="text-[var(--cw-footer-text-secondary)] block min-[800px]:hidden">
+      <div className="text-text-tertiary block desktop:hidden">
         © {year} ChadWallet
       </div>
     </footer>
