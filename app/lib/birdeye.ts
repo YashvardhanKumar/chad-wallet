@@ -256,3 +256,185 @@ export async function searchTokens(keyword: string): Promise<TrendingToken[]> {
     return [];
   }
 }
+
+// --- Leaderboard & Wallet PnL types ---
+
+export interface LeaderboardEntry {
+  owner: string;
+  total_value: number;
+}
+
+export interface WalletPnlToken {
+  symbol: string;
+  decimals: number;
+  address: string;
+  counts: {
+    total_buy: number;
+    total_sell: number;
+    total_trade: number;
+  };
+  quantity: {
+    total_bought_amount: number;
+    total_sold_amount: number;
+    holding: number;
+  };
+  cashflow_usd: {
+    cost_of_quantity_sold: number;
+    total_invested: number;
+    total_sold: number;
+    current_value: number;
+  };
+  pnl: {
+    realized_profit_usd: number;
+    realized_profit_percent: number;
+    unrealized_usd: number;
+    unrealized_percent: number;
+    total_usd: number;
+    total_percent: number;
+    avg_profit_per_trade_usd: number;
+  };
+  pricing: {
+    current_price: number | null;
+    avg_buy_cost: number;
+    avg_sell_cost: number;
+  };
+}
+
+export interface WalletPnlSummary {
+  unique_tokens: number;
+  counts: {
+    total_buy: number;
+    total_sell: number;
+    total_trade: number;
+    total_win: number;
+    total_loss: number;
+    win_rate: number;
+  };
+  cashflow_usd: {
+    total_invested: number;
+    total_sold: number;
+    current_value: number;
+  };
+  pnl: {
+    realized_profit_usd: number;
+    realized_profit_percent: number;
+    unrealized_usd: number;
+    total_usd: number;
+    avg_profit_per_trade_usd: number;
+  };
+}
+
+export interface WalletPnlDetailsResponse {
+  meta: {
+    address: string;
+    currency: string;
+    holding_check: boolean;
+    time: string;
+  };
+  tokens: WalletPnlToken[];
+  summary: WalletPnlSummary;
+}
+
+/**
+ * Get wallet leaderboard sorted by total asset value
+ */
+export async function getLeaderboard(limit = 20, offset = 0): Promise<LeaderboardEntry[]> {
+  try {
+    const res = await fetch(
+      `${BIRDEYE_API_BASE}/wallet/v2/leaderboard?limit=${limit}&offset=${offset}`,
+      {
+        headers: getHeaders(),
+        next: { revalidate: 120 },
+      }
+    );
+
+    if (!res.ok) throw new Error(`BirdEye API error: ${res.status}`);
+    const data = await res.json();
+
+    return (data.data || []).map((entry: any) => ({
+      owner: entry.owner,
+      total_value: entry.total_value || 0,
+    }));
+  } catch (error) {
+    console.error('Failed to fetch leaderboard:', error);
+    return [];
+  }
+}
+
+/**
+ * Get PnL details for a specific wallet
+ */
+export async function getWalletPnlDetails(
+  wallet: string,
+  duration: 'all' | '90d' | '30d' | '7d' | '24h' = 'all'
+): Promise<WalletPnlDetailsResponse | null> {
+  try {
+    const res = await fetch(`${BIRDEYE_API_BASE}/wallet/v2/pnl/details`, {
+      method: 'POST',
+      headers: {
+        ...getHeaders(),
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        wallet,
+        duration,
+        sort_by: 'last_trade',
+        sort_type: 'desc',
+        limit: 10,
+      }),
+    });
+
+    if (!res.ok) throw new Error(`BirdEye API error: ${res.status}`);
+    const data = await res.json();
+
+    return data.data || null;
+  } catch (error) {
+    console.error('Failed to fetch wallet PnL details:', error);
+    return null;
+  }
+}
+
+/**
+ * Get token trades (v3) with various filters
+ */
+export async function getTokenTradesV3(
+  address: string,
+  options: {
+    limit?: number;
+    offset?: number;
+    tx_type?: 'swap' | 'buy' | 'sell' | 'add' | 'remove' | 'all';
+    sort_type?: 'asc' | 'desc';
+    before_time?: number;
+    after_time?: number;
+  } = {}
+): Promise<TradeItem[]> {
+  const { limit = 100, offset = 0, tx_type = 'swap', sort_type = 'desc', before_time, after_time } = options;
+
+  try {
+    let url = `${BIRDEYE_API_BASE}/defi/v3/token/txs?address=${address}&offset=${offset}&limit=${limit}&sort_by=block_unix_time&sort_type=${sort_type}&tx_type=${tx_type}`;
+    if (before_time) url += `&before_time=${before_time}`;
+    if (after_time) url += `&after_time=${after_time}`;
+
+    const res = await fetch(url, {
+      headers: getHeaders(),
+      next: { revalidate: 15 },
+    });
+
+    if (!res.ok) throw new Error(`BirdEye API error: ${res.status}`);
+    const data = await res.json();
+
+    return (data.data?.items || []).map((tx: any) => ({
+      txHash: tx.txHash,
+      blockUnixTime: tx.blockUnixTime,
+      source: tx.source,
+      owner: tx.owner,
+      from: tx.from,
+      to: tx.to,
+      side: tx.side,
+      volumeUSD: tx.volumeUSD,
+    }));
+  } catch (error) {
+    console.error('Failed to fetch token trades v3:', error);
+    return [];
+  }
+}

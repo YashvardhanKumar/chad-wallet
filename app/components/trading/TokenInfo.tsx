@@ -286,7 +286,7 @@ export default function TokenInfo({ token }: { token: Token }) {
   return (
     <div className="lg:h-full flex flex-col">
       {/* Token Header Info */}
-      <div className="px-3 lg:px-6 py-3 lg:py-4 border-b border-border/50 shrink-0">
+      <div className="px-3 lg:px-6 py-3 lg:py-4 border-b border-bg-tertiary shrink-0">
         <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3">
           <div className="flex items-center gap-3 lg:gap-4">
             <TokenLogo token={token} size={40} />
@@ -302,7 +302,7 @@ export default function TokenInfo({ token }: { token: Token }) {
               </div>
               <div className="flex items-center gap-2 mt-0.5">
                 <span className="text-[11px] lg:text-xs text-text-secondary truncate">{token.name}</span>
-                <span className="text-[10px] lg:text-xs text-text-tertiary bg-surface px-1.5 py-0.5 rounded font-mono border border-border/50 truncate max-w-[100px] lg:max-w-none">
+                <span className="text-[10px] lg:text-xs text-text-tertiary bg-surface px-1.5 py-0.5 rounded font-mono border border-bg-tertiary truncate max-w-[100px] lg:max-w-none">
                   {shortenAddress(token.address)}
                 </span>
                 <span className="text-[10px] lg:text-xs text-text-tertiary">📋</span>
@@ -360,7 +360,7 @@ export default function TokenInfo({ token }: { token: Token }) {
                 key={range}
                 onClick={() => setTimeRange(range)}
                 className={`text-[10px] lg:text-[11px] px-1.5 lg:px-2 py-1 rounded font-medium backdrop-blur-md transition-colors ${
-                  timeRange === range ? 'bg-white/10 text-white' : 'text-text-tertiary hover:text-text-secondary hover:bg-white/5'
+                  timeRange === range ? 'bg-bg-tertiary-solid text-text-primary' : 'text-text-tertiary hover:text-text-secondary hover:bg-bg-tertiary'
                 }`}
               >
                 {range}
@@ -383,10 +383,10 @@ export default function TokenInfo({ token }: { token: Token }) {
       </div>
 
       {/* Bottom Tabs (Holders / Trades) */}
-      <div className="w-full lg:flex lg:flex-1 lg:min-h-0 border-t border-border/50">
+      <div className="w-full lg:flex lg:flex-1 lg:min-h-0 border-t border-bg-tertiary">
         {/* Left side: Live Trades Leaderboard */}
-        <div className="w-80 border-r border-border/50 hidden xl:flex flex-col">
-          <div className="flex items-center gap-4 px-4 py-3 border-b border-border/50">
+        <div className="w-80 border-r border-bg-tertiary hidden xl:flex flex-col">
+          <div className="flex items-center gap-4 px-4 py-3 border-b border-bg-tertiary">
             {['Recent Swaps'].map((tab) => (
               <button 
                 key={tab}
@@ -397,7 +397,7 @@ export default function TokenInfo({ token }: { token: Token }) {
               </button>
             ))}
           </div>
-          <div className="flex items-center justify-between px-4 py-3 border-b border-border/50">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-bg-tertiary">
             <h3 className="font-semibold text-sm">Live Blockchain Swaps</h3>
           </div>
           <div className="flex-1 overflow-y-auto custom-scrollbar">
@@ -421,7 +421,7 @@ export default function TokenInfo({ token }: { token: Token }) {
                 ) : liveTrades.length === 0 ? (
                   <tr><td colSpan={3} className="py-8 text-center text-sm text-text-tertiary">No recent swaps</td></tr>
                 ) : liveTrades.map((t, i) => (
-                  <tr key={i} className="hover:bg-white/5 transition-colors cursor-pointer group">
+                  <tr key={i} className="hover:bg-bg-tertiary transition-colors cursor-pointer group">
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-2">
                         <div className="w-6 h-6 rounded-full bg-surface-hover overflow-hidden">
@@ -447,7 +447,7 @@ export default function TokenInfo({ token }: { token: Token }) {
         </div>
 
         <div className="flex-1 lg:flex-1 flex flex-col min-w-0">
-          <div className="flex items-center gap-4 px-4 py-3 border-b border-border/50">
+          <div className="flex items-center gap-4 px-4 py-3 border-b border-bg-tertiary">
             <button 
               onClick={() => setBottomTab('Trades')} 
               className={`font-semibold text-sm backdrop-blur-md transition-colors ${bottomTab === 'Trades' ? 'text-white' : 'text-text-tertiary hover:text-text-secondary'}`}
@@ -485,7 +485,7 @@ export default function TokenInfo({ token }: { token: Token }) {
                   ) : liveTrades.length === 0 ? (
                     <tr><td colSpan={4} className="py-8 text-center text-sm text-text-tertiary">No recent swaps</td></tr>
                   ) : liveTrades.map((t, i) => (
-                    <tr key={i} className="hover:bg-white/5 transition-colors cursor-pointer">
+                      <tr key={i} className="hover:bg-bg-tertiary transition-colors cursor-pointer">
                       <td className="py-2.5 px-4">
                          <div className="flex items-center gap-2">
                           <div className="w-5 h-5 rounded-full bg-surface-hover overflow-hidden">
@@ -509,7 +509,7 @@ export default function TokenInfo({ token }: { token: Token }) {
             {bottomTab === 'Thesis' && (
               <div className="p-4 flex flex-col gap-4">
                 {/* Compose Thesis */}
-                <div className="bg-white/5 rounded-xl p-3 border border-border/50">
+                <div className="bg-bg-tertiary rounded-xl p-3 border border-bg-tertiary">
                   <textarea
                     value={thesisContent}
                     onChange={(e) => setThesisContent(e.target.value)}
@@ -517,12 +517,12 @@ export default function TokenInfo({ token }: { token: Token }) {
                     className="w-full bg-transparent text-sm text-white placeholder-text-tertiary focus:outline-none resize-none h-20"
                   />
                   {thesisImage && (
-                    <div className="relative w-20 h-20 mb-2 rounded-lg overflow-hidden border border-white/10">
+                    <div className="relative w-20 h-20 mb-2 rounded-lg overflow-hidden border border-bg-tertiary">
                       <Image src={thesisImage} alt="Attachment" fill className="object-cover" unoptimized />
                       <button onClick={() => setThesisImage('')} className="absolute top-1 right-1 bg-black/50 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-black/80">&times;</button>
                     </div>
                   )}
-                  <div className="flex items-center justify-between mt-2 pt-2 border-t border-border/30">
+                  <div className="flex items-center justify-between mt-2 pt-2 border-t border-bg-tertiary">
                     <CldUploadWidget uploadPreset="chad_wallet" onSuccess={(result: any) => setThesisImage(result.info.secure_url)}>
                       {({ open }) => (
                         <button onClick={() => open()} type="button" className="text-text-secondary hover:text-white transition-colors text-xs flex items-center gap-1">
@@ -547,7 +547,7 @@ export default function TokenInfo({ token }: { token: Token }) {
                 <div className="flex flex-col gap-3">
                   {tradesLoading ? (
                     [...Array(3)].map((_, i) => (
-                      <div key={i} className="animate-pulse bg-white/5 rounded-xl p-3 border border-border/30">
+                      <div key={i} className="animate-pulse bg-bg-tertiary rounded-xl p-3 border border-bg-tertiary">
                         <div className="flex items-center gap-2 mb-2">
                           <div className="w-6 h-6 bg-surface rounded-full" />
                           <div className="h-3 bg-surface rounded w-24" />
@@ -563,7 +563,7 @@ export default function TokenInfo({ token }: { token: Token }) {
                     </div>
                   ) : (
                     theses.map((t, i) => (
-                      <div key={i} className="bg-white/5 rounded-xl p-3 border border-border/30">
+                      <div key={i} className="bg-bg-tertiary rounded-xl p-3 border border-bg-tertiary">
                         <div className="flex items-center gap-2 mb-2">
                           <div className="w-6 h-6 rounded-full bg-surface-hover overflow-hidden">
                              <Image src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${t.user_id}`} alt="" width={24} height={24} unoptimized />
@@ -575,7 +575,7 @@ export default function TokenInfo({ token }: { token: Token }) {
                         </div>
                         <p className="text-sm text-white whitespace-pre-wrap">{t.content}</p>
                         {t.image_url && (
-                          <div className="relative w-full h-40 mt-3 rounded-lg overflow-hidden border border-white/10">
+                          <div className="relative w-full h-40 mt-3 rounded-lg overflow-hidden border border-bg-tertiary">
                             <Image src={t.image_url} alt="Thesis attachment" fill className="object-cover" unoptimized />
                           </div>
                         )}

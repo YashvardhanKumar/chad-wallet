@@ -492,11 +492,11 @@ export default function TradePanel({ token }: { token: Token | null }) {
   return (
     <div className="h-full flex flex-col overflow-y-auto custom-scrollbar">
       {/* Buy/Sell Tabs */}
-      <div className="flex border-b border-border/50">
+      <div className="flex border-b border-bg-tertiary">
         <button
           onClick={() => setMode('buy')}
             className={`flex-1 py-4 font-bold text-sm transition-all duration-200 border-b-2 backdrop-blur-md ${
-            mode === 'buy' ? 'border-green text-green bg-green/5' : 'border-transparent text-text-secondary hover:bg-white/5'
+            mode === 'buy' ? 'border-green text-green bg-green/5' : 'border-transparent text-text-secondary hover:bg-bg-tertiary'
           }`}
         >
           Buy
@@ -504,7 +504,7 @@ export default function TradePanel({ token }: { token: Token | null }) {
         <button
           onClick={() => setMode('sell')}
             className={`flex-1 py-4 font-bold text-sm transition-all duration-200 border-b-2 backdrop-blur-md ${
-            mode === 'sell' ? 'border-red text-red bg-red/5' : 'border-transparent text-text-secondary hover:bg-white/5'
+            mode === 'sell' ? 'border-red text-red bg-red/5' : 'border-transparent text-text-secondary hover:bg-bg-tertiary'
           }`}
         >
           Sell
@@ -522,7 +522,7 @@ export default function TradePanel({ token }: { token: Token | null }) {
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             placeholder="0"
-            className={`w-full bg-background border border-border/50 rounded-xl px-4 py-5 text-3xl font-medium text-white focus:outline-none focus:border-accent transition-colors placeholder:text-text-tertiary/50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${mode === 'buy' ? 'pl-10' : ''}`}
+            className={`w-full bg-background border border-bg-tertiary rounded-xl px-4 py-5 text-3xl font-medium text-white focus:outline-none focus:border-accent transition-colors placeholder:text-text-tertiary/50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${mode === 'buy' ? 'pl-10' : ''}`}
           />
           <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-medium text-text-secondary">{mode === 'buy' ? 'Enter amount' : token.symbol}</span>
         </div>
@@ -533,12 +533,12 @@ export default function TradePanel({ token }: { token: Token | null }) {
             <button
               key={preset}
               onClick={() => handlePreset(preset)}
-              className="flex-1 py-2 rounded-lg bg-white/5 hover:bg-white/10 backdrop-blur-md transition-colors text-sm font-semibold text-white"
+              className="flex-1 py-2 rounded-lg bg-bg-tertiary hover:bg-bg-tertiary-solid backdrop-blur-md transition-colors text-sm font-semibold text-white"
             >
               {preset}
             </button>
           ))}
-          <button className="p-2 rounded-lg bg-white/5 hover:bg-white/10 backdrop-blur-md transition-colors text-text-secondary flex items-center justify-center px-3">
+          <button className="p-2 rounded-lg bg-bg-tertiary hover:bg-bg-tertiary-solid backdrop-blur-md transition-colors text-text-secondary flex items-center justify-center px-3">
              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
           </button>
         </div>
@@ -562,7 +562,7 @@ export default function TradePanel({ token }: { token: Token | null }) {
             onClick={handleTrade}
             disabled={isTrading}
             className={`w-full py-4 rounded-xl font-bold text-[15px] backdrop-blur-md transition-all duration-200 disabled:opacity-50 ${
-              mode === 'buy' ? 'bg-white/10 hover:bg-white/20 text-white' : 'bg-red/10 hover:bg-red/20 text-red'
+              mode === 'buy' ? 'bg-bg-tertiary-solid hover:bg-bg-tertiary-solid text-white' : 'bg-red/10 hover:bg-red/20 text-red'
             }`}
           >
             {isTrading ? (
@@ -586,14 +586,14 @@ export default function TradePanel({ token }: { token: Token | null }) {
 
         {/* Display Trading Wallet Address for funding */}
         {wallets[0]?.address && (
-          <div className="mt-3 flex items-center justify-between text-xs text-text-secondary bg-white/5 rounded-lg px-3 py-2 border border-border/30">
+          <div className="mt-3 flex items-center justify-between text-xs text-text-secondary bg-bg-tertiary rounded-lg px-3 py-2 border border-bg-tertiary">
             <span>Trading Wallet:</span>
             <button
               onClick={() => {
                 navigator.clipboard.writeText(wallets[0].address);
                 alert('Wallet address copied to clipboard!');
               }}
-              className="font-mono hover:text-accent font-semibold transition-colors flex items-center gap-1 cursor-pointer bg-white/5 hover:bg-white/10 px-2 py-0.5 rounded border border-border"
+              className="font-mono hover:text-accent font-semibold transition-colors flex items-center gap-1 cursor-pointer bg-bg-tertiary hover:bg-bg-tertiary-solid px-2 py-0.5 rounded border border-border"
               title="Copy Wallet Address"
             >
               {wallets[0].address.slice(0, 6)}...{wallets[0].address.slice(-6)} 📋
@@ -602,7 +602,7 @@ export default function TradePanel({ token }: { token: Token | null }) {
         )}
 
         {/* Thesis Input */}
-        <div className="mt-8 border-t border-border/50 pt-6">
+        <div className="mt-8 border-t border-bg-tertiary pt-6">
            <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                  <Image src="https://api.dicebear.com/7.x/avataaars/svg?seed=user" alt="User" width={28} height={28} className="rounded-full bg-surface-hover" />
@@ -630,7 +630,7 @@ export default function TradePanel({ token }: { token: Token | null }) {
               </div>
            </div>
 
-           <div className="bg-background rounded-xl p-3 border border-border/50">
+           <div className="bg-background rounded-xl p-3 border border-bg-tertiary">
               <div className="flex items-center gap-2 mb-2">
                  <Image src="https://api.dicebear.com/7.x/avataaars/svg?seed=user" alt="User" width={20} height={20} className="rounded-full bg-surface-hover" />
                  <span className="text-xs font-semibold text-white">mr.stillyuhhbihh</span>
@@ -641,7 +641,7 @@ export default function TradePanel({ token }: { token: Token | null }) {
                 placeholder={`Write a thesis on ${token.symbol}...`}
                 rows={2}
               ></textarea>
-              <div className="flex items-center justify-between mt-2 pt-2 border-t border-border/30">
+              <div className="flex items-center justify-between mt-2 pt-2 border-t border-bg-tertiary">
                  <div className="flex items-center gap-1.5 text-xs text-text-tertiary">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                     Visible to everyone
@@ -700,7 +700,7 @@ export default function TradePanel({ token }: { token: Token | null }) {
             {/* Details Section */}
             {txModal.type === 'success' ? (
               txModal.signature && (
-                <div className="px-6 py-4 bg-white/3 border-y border-border/50 flex flex-col gap-2">
+                <div className="px-6 py-4 bg-bg-tertiary border-y border-bg-tertiary flex flex-col gap-2">
                   <div className="flex flex-col gap-1">
                     <span className="text-[9px] uppercase font-bold tracking-wider text-text-tertiary">Transaction Signature</span>
                     <a
@@ -716,7 +716,7 @@ export default function TradePanel({ token }: { token: Token | null }) {
               )
             ) : (
               wallets[0]?.address && (
-                <div className="px-6 py-4 bg-white/3 border-y border-border/50 flex flex-col gap-2.5">
+                <div className="px-6 py-4 bg-bg-tertiary border-y border-bg-tertiary flex flex-col gap-2.5">
                   <div className="flex justify-between text-xs">
                     <span className="text-text-secondary font-medium">Your Balance</span>
                     <span className="font-bold text-white">
@@ -752,7 +752,7 @@ export default function TradePanel({ token }: { token: Token | null }) {
             )}
             
             {/* Actions */}
-            <div className="p-3 bg-white/2 flex gap-2">
+            <div className="p-3 bg-bg-tertiary flex gap-2">
               {txModal.type === 'success' ? (
                 <>
                   {txModal.signature && (
@@ -760,7 +760,7 @@ export default function TradePanel({ token }: { token: Token | null }) {
                       href={`https://solscan.io/tx/${txModal.signature}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex-1 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-white font-bold text-xs text-center transition-colors"
+                      className="flex-1 py-2.5 rounded-xl bg-bg-tertiary hover:bg-bg-tertiary-solid text-white font-bold text-xs text-center transition-colors"
                     >
                       View on Solscan
                     </a>
@@ -787,7 +787,7 @@ export default function TradePanel({ token }: { token: Token | null }) {
                   </button>
                   <button
                     onClick={() => setTxModal(prev => ({ ...prev, isOpen: false }))}
-                    className="px-3.5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-white font-bold text-xs transition-colors cursor-pointer text-center"
+                    className="px-3.5 py-2.5 rounded-xl bg-bg-tertiary hover:bg-bg-tertiary-solid text-white font-bold text-xs transition-colors cursor-pointer text-center"
                   >
                     Cancel
                   </button>

@@ -213,7 +213,7 @@ export default function Portfolio({
                 <button
                   key={h.mint}
                   onClick={() => onSelectToken(h.mint)}
-                  className="w-full flex items-center justify-between py-2 px-1 hover:bg-white/5 backdrop-blur-md rounded-lg transition-colors text-left"
+                  className="w-full flex items-center justify-between py-2 px-1 hover:bg-bg-tertiary backdrop-blur-md rounded-lg transition-colors text-left"
                 >
                   <div className="flex items-center gap-2 min-w-0">
                     <TokenLogo token={{ address: h.mint, symbol: h.symbol, logoURI: h.logoURI || undefined }} size={28} />
@@ -258,7 +258,7 @@ export default function Portfolio({
               trades.map((trade) => (
                 <div
                   key={trade.id}
-                  className="flex items-center gap-3 py-2.5 px-2 rounded-lg hover:bg-white/5 transition-colors"
+                  className="flex items-center gap-3 py-2.5 px-2 rounded-lg hover:bg-bg-tertiary transition-colors"
                 >
                   <TokenLogo token={{ address: trade.tokenAddress, symbol: trade.tokenSymbol, logoURI: trade.tokenLogoURI ?? undefined }} size={28} />
                   <div className="flex-1 min-w-0">
