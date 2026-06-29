@@ -964,7 +964,7 @@ export default function TokenInfo({ token }: { token: Token }) {
                     className={`px-2 py-0.5 rounded-md font-semibold transition-all ${
                       candleInterval === interval
                         ? "bg-accent text-white shadow-[0_0_8px_rgba(255,111,233,0.3)]"
-                        : "text-text-secondary hover:text-white hover:bg-bg-tertiary"
+                        : "text-text-secondary hover:text-white hover:bg-primary"
                     }`}
                   >
                     {interval}
@@ -982,8 +982,8 @@ export default function TokenInfo({ token }: { token: Token }) {
                     onClick={() => setTimeLimit(range)}
                     className={`px-2 py-0.5 rounded-md font-semibold transition-all ${
                       timeLimit === range
-                        ? "bg-accent/20 border border-accent/40 text-accent"
-                        : "text-text-secondary hover:text-white hover:bg-bg-tertiary border border-transparent"
+                        ? "bg-accent text-white shadow-[0_0_8px_rgba(255,111,233,0.3)]"
+                        : "text-text-secondary hover:text-white hover:bg-primary"
                     }`}
                   >
                     {range}
