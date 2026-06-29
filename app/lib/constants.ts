@@ -54,41 +54,77 @@ export const FEATURES = [
 ];
 
 // Format helpers
-export function formatPrice(price: number): string {
-  if (price >= 1) return `$${price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  if (price >= 0.01) return `$${price.toFixed(4)}`;
-  if (price >= 0.0001) return `$${price.toFixed(6)}`;
+export function formatPrice(priceInput?: number | string | null): string {
+  if (priceInput == null) return '0.00 SOL';
+  const price = typeof priceInput === 'string' ? parseFloat(priceInput) : priceInput;
+  if (isNaN(price) || price === 0) return '0.00 SOL';
+  if (price >= 1) return `${price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} SOL`;
+  if (price >= 0.01) return `${price.toFixed(4)} SOL`;
+  if (price >= 0.0001) return `${price.toFixed(6)} SOL`;
   // For very small prices, use subscript notation like the app
   const str = price.toFixed(12);
   const match = str.match(/^0\.(0+)/);
   if (match) {
     const zeroCount = match[1].length;
     const significantDigits = str.slice(match[0].length, match[0].length + 4);
-    return `$0.0${zeroCount > 1 ? '₍' + zeroCount + '₎' : ''}${significantDigits}`;
+    return `0.0${zeroCount > 1 ? '₍' + zeroCount + '₎' : ''}${significantDigits} SOL`;
   }
-  return `$${price.toFixed(8)}`;
+  return `${price.toFixed(8)} SOL`;
 }
 
-export function formatMarketCap(mc: number): string {
-  if (mc >= 1e9) return `$${(mc / 1e9).toFixed(2)}B`;
-  if (mc >= 1e6) return `$${(mc / 1e6).toFixed(2)}M`;
-  if (mc >= 1e3) return `$${(mc / 1e3).toFixed(2)}K`;
-  return `$${mc.toFixed(2)}`;
+export function formatMarketCap(mcInput?: number | string | null): string {
+  if (mcInput == null) return '0.00 SOL';
+  const mc = typeof mcInput === 'string' ? parseFloat(mcInput) : mcInput;
+  if (isNaN(mc)) return '0.00 SOL';
+  if (mc >= 1e9) return `${(mc / 1e9).toFixed(2)}B SOL`;
+  if (mc >= 1e6) return `${(mc / 1e6).toFixed(2)}M SOL`;
+  if (mc >= 1e3) return `${(mc / 1e3).toFixed(2)}K SOL`;
+  return `${mc.toFixed(2)} SOL`;
 }
 
-export function formatPercentChange(change: number): string {
+export function formatPercentChange(changeInput?: number | string | null): string {
+  if (changeInput == null) return '0.00%';
+  const change = typeof changeInput === 'string' ? parseFloat(changeInput) : changeInput;
+  if (isNaN(change)) return '0.00%';
   const sign = change >= 0 ? '▲' : '▼';
   return `${sign} ${Math.abs(change).toFixed(2)}%`;
 }
 
-export function shortenAddress(address: string, chars = 4): string {
+export function shortenAddress(address?: string | null, chars = 4): string {
+  if (!address) return '';
   return `${address.slice(0, chars)}...${address.slice(-chars)}`;
 }
 
 export function timeAgo(timestamp: number): string {
-  const seconds = Math.floor(Date.now() / 1000 - timestamp);
-  if (seconds < 60) return `${seconds}s ago`;
-  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
-  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
-  return `${Math.floor(seconds / 86400)}d ago`;
+  if (!timestamp) return "Just now";
+  // Normalize milliseconds (13-digit) to seconds (10-digit)
+  const secs = timestamp > 1e11 ? Math.floor(timestamp / 1000) : timestamp;
+  const diff = Math.max(0, Math.floor(Date.now() / 1000 - secs));
+
+  if (diff < 60) return `${diff}s ago`;
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  return `${Math.floor(diff / 86400)}d ago`;
+}
+
+export function getTradingViewSymbol(token: { address: string, symbol: string, dex?: string }): string | null {
+  // Handle major cryptocurrencies with well-known tickers
+  switch (token.symbol.toUpperCase()) {
+    case 'SOL':
+      return 'COINBASE:SOLUSD';
+    case 'USDC':
+      return 'COINBASE:USDCUSD';
+    case 'WIF':
+      return 'BINANCE:WIFUSDT';
+    // Add other major tokens as needed
+  }
+
+  // Handle bonding curve tokens which don't have a chart on TradingView
+  if (token.dex === 'Pump.fun') {
+    return null;
+  }
+
+  // Default to DEXSCREENER format for other SPL tokens
+  // This assumes the token address is the pair address, which is common for APIs like Birdeye
+  return `DEXSCREENER:${token.address}`;
 }

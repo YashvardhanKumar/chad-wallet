@@ -24,14 +24,14 @@ export default function CtaSection() {
           {authenticated ? (
             <Link
               href="/trade"
-              className="bg-accent hover:bg-accent-hover text-black font-bold px-8 py-4 rounded-2xl text-lg transition-all duration-200"
+              className="bg-accent hover:bg-accent-hover text-white font-bold px-8 py-4 rounded-2xl text-lg transition-all duration-200"
             >
               Start Trading
             </Link>
           ) : (
             <button
               onClick={login}
-              className="bg-accent hover:bg-accent-hover text-black font-bold px-8 py-4 rounded-2xl text-lg transition-all duration-200"
+              className="bg-accent hover:bg-accent-hover text-white font-bold px-8 py-4 rounded-2xl text-lg transition-all duration-200"
             >
               Start Trading
             </button>

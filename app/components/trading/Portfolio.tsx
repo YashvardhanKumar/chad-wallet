@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import TokenLogo from './TokenLogo';
-import { getTrades, TradeRecord } from '@/app/lib/tradeHistory';
+import { getTrades, TradeRecord, upsertHolding } from '@/app/lib/tradeHistory';
 import { timeAgo } from '@/app/lib/constants';
 import { getMainnetRpcUrl } from '@/app/lib/solanaRpc';
 
@@ -32,11 +32,15 @@ export default function Portfolio({
   tokenPrices,
   onClose,
   onSelectToken,
+  onSummaryChange,
+  hidden,
 }: {
   walletAddress: string | undefined;
   tokenPrices: TokenPrice[];
   onClose: () => void;
   onSelectToken: (addr: string) => void;
+  onSummaryChange?: (summary: { totalValue: number; totalPnl: number }) => void;
+  hidden?: boolean;
 }) {
   const [tab, setTab] = useState<'holdings' | 'history'>('holdings');
   const [holdings, setHoldings] = useState<Holding[]>([]);
@@ -115,6 +119,18 @@ export default function Portfolio({
           }
 
           results.push({ mint, symbol, name, logoURI, balance, price, usdValue, avgEntry, pnl, pnlPercent });
+
+          // Upsert holding to Supabase
+          if (walletAddress) {
+            upsertHolding(walletAddress, {
+              tokenAddress: mint,
+              tokenSymbol: symbol,
+              tokenName: name || null,
+              tokenLogoURI: logoURI || null,
+              balance,
+              avgEntry,
+            }).catch(console.error);
+          }
         } catch (e) {
           console.error(`Failed to fetch balance for ${mint}:`, e);
         }
@@ -127,8 +143,17 @@ export default function Portfolio({
     fetchData();
   }, [walletAddress, tokenPrices]);
 
-  const totalPortfolioValue = solBalance * (tokenPrices.find(t => t.symbol === 'SOL')?.price || 150) +
+  const totalPortfolioValue = solBalance * (tokenPrices.find(t => t.symbol === 'SOL')?.price || 1) +
     holdings.reduce((sum, h) => sum + h.usdValue, 0);
+  const totalPnl = holdings.reduce((sum, h) => sum + (h.pnl ?? 0), 0);
+
+  useEffect(() => {
+    if (onSummaryChange) {
+      onSummaryChange({ totalValue: totalPortfolioValue, totalPnl });
+    }
+  }, [totalPortfolioValue, totalPnl, onSummaryChange]);
+
+  if (hidden) return null;
 
   return (
     <div className="flex flex-col h-full">
@@ -169,8 +194,8 @@ export default function Portfolio({
             {/* Total value */}
             <div className="bg-surface rounded-xl p-4 border border-border/50">
               <div className="text-[10px] uppercase tracking-wider text-text-tertiary font-semibold">Portfolio Value</div>
-              <div className="text-2xl font-bold text-white mt-1">
-                ${totalPortfolioValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              <div className="text-2xl font-bold text-white mt-1" data-balance>
+                {totalPortfolioValue.toLocaleString('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 4 })} SOL
               </div>
             </div>
 
@@ -183,13 +208,13 @@ export default function Portfolio({
                 <div>
                   <div className="text-sm font-semibold text-white">SOL</div>
                   <div className="text-[11px] text-text-tertiary">
-                    {solBalance.toFixed(4)} SOL
+                    <span data-balance>{solBalance.toFixed(4)} SOL</span>
                   </div>
                 </div>
               </div>
-              <div className="text-right">
+              <div className="text-right" data-balance>
                 <div className="text-sm font-semibold text-white">
-                  ${(solBalance * (tokenPrices.find(t => t.symbol === 'SOL')?.price || 150)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  {solBalance.toLocaleString('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 4 })} SOL
                 </div>
               </div>
             </div>
@@ -213,24 +238,24 @@ export default function Portfolio({
                 <button
                   key={h.mint}
                   onClick={() => onSelectToken(h.mint)}
-                  className="w-full flex items-center justify-between py-2 px-1 hover:bg-white/5 backdrop-blur-md rounded-lg transition-colors text-left"
+                  className="w-full flex items-center justify-between py-2 px-1 hover:bg-bg-tertiary backdrop-blur-md rounded-lg transition-colors text-left"
                 >
                   <div className="flex items-center gap-2 min-w-0">
                     <TokenLogo token={{ address: h.mint, symbol: h.symbol, logoURI: h.logoURI || undefined }} size={28} />
                     <div className="min-w-0">
                       <div className="text-sm font-semibold text-white truncate">{h.symbol}</div>
                       <div className="text-[11px] text-text-tertiary">
-                        {h.balance.toLocaleString('en-US', { maximumFractionDigits: 4 })}
+                        <span data-balance>{h.balance.toLocaleString('en-US', { maximumFractionDigits: 4 })}</span>
                       </div>
                     </div>
                   </div>
-                  <div className="text-right">
+                  <div className="text-right" data-balance>
                     <div className="text-sm font-semibold text-white">
-                      ${h.usdValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      {h.usdValue.toLocaleString('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 4 })} SOL
                     </div>
                     {h.pnl !== null && (
                       <div className={`text-[11px] font-semibold ${h.pnl >= 0 ? 'text-green' : 'text-red'}`}>
-                        {h.pnl >= 0 ? '+' : ''}{h.pnl.toFixed(2)} ({h.pnlPercent?.toFixed(1)}%)
+                        {h.pnl >= 0 ? '+' : ''}{h.pnl.toFixed(4)} SOL ({h.pnlPercent?.toFixed(1)}%)
                       </div>
                     )}
                   </div>
@@ -258,7 +283,7 @@ export default function Portfolio({
               trades.map((trade) => (
                 <div
                   key={trade.id}
-                  className="flex items-center gap-3 py-2.5 px-2 rounded-lg hover:bg-white/5 transition-colors"
+                  className="flex items-center gap-3 py-2.5 px-2 rounded-lg hover:bg-bg-tertiary transition-colors"
                 >
                   <TokenLogo token={{ address: trade.tokenAddress, symbol: trade.tokenSymbol, logoURI: trade.tokenLogoURI ?? undefined }} size={28} />
                   <div className="flex-1 min-w-0">
@@ -270,13 +295,13 @@ export default function Portfolio({
                         {trade.type.toUpperCase()}
                       </span>
                     </div>
-                    <div className="text-[11px] text-text-tertiary">
-                      {trade.amount.toLocaleString('en-US', { maximumFractionDigits: 4 })} @ ${trade.priceUsd.toFixed(4)}
+                    <div className="text-[11px] text-text-tertiary" data-balance>
+                      {trade.amount.toLocaleString('en-US', { maximumFractionDigits: 4 })} @ {trade.priceUsd.toFixed(6)} SOL
                     </div>
                   </div>
-                  <div className="text-right">
+                  <div className="text-right" data-balance>
                     <div className="text-xs font-semibold text-white">
-                      ${trade.solAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      {trade.solAmount.toLocaleString('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 4 })} SOL
                     </div>
                     <div className="text-[10px] text-text-tertiary">{timeAgo(Math.floor(trade.timestamp / 1000))}</div>
                   </div>

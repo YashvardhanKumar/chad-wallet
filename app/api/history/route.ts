@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server';
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const address = searchParams.get('address');
-  const type = searchParams.get('type') as '1m' | '5m' | '15m' | '1H' | '4H' | '1D' | '1W' || '15m';
+  const type = searchParams.get('type') as any || '15m';
   const timeFrom = searchParams.get('timeFrom');
   const timeTo = searchParams.get('timeTo');
 

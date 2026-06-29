@@ -1,20 +1,24 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { PrivyProvider, usePrivy } from '@privy-io/react-auth';
 import { createSolanaRpc, createSolanaRpcSubscriptions } from '@solana/kit';
 import { getMainnetRpcSubscriptionUrl, getMainnetRpcUrl } from '@/app/lib/solanaRpc';
+import { BlurBalanceProvider } from '@/app/lib/BlurBalanceContext';
+
+import { TradingProvider } from '@/app/context/TradingContext';
 
 function AuthRedirect() {
   const { ready, authenticated } = usePrivy();
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
-    if (ready && authenticated) {
+    if (ready && authenticated && pathname === '/') {
       router.push('/trade');
     }
-  }, [ready, authenticated, router]);
+  }, [ready, authenticated, pathname, router]);
 
   return null;
 }
@@ -46,7 +50,11 @@ export default function Providers({ children }: { children: React.ReactNode }) {
       }}
     >
       <AuthRedirect />
-      {children}
+      <BlurBalanceProvider>
+        <TradingProvider>
+          {children}
+        </TradingProvider>
+      </BlurBalanceProvider>
     </PrivyProvider>
   );
 }

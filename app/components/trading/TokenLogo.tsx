@@ -21,7 +21,7 @@ export default function TokenLogo({ token, size = 36 }: TokenLogoProps) {
         style={{ width: size, height: size, fontSize: Math.max(10, size / 2.5) }} 
         className="rounded-full bg-surface flex items-center justify-center font-bold text-accent shrink-0 border border-border"
       >
-        {token.symbol.charAt(0)}
+        {(token.symbol || '?').charAt(0)}
       </div>
     );
   }
@@ -29,7 +29,7 @@ export default function TokenLogo({ token, size = 36 }: TokenLogoProps) {
   return (
     <Image
       src={token.logoURI}
-      alt={token.symbol}
+      alt={token.symbol || 'Token'}
       width={size}
       height={size}
       className="rounded-full shrink-0 object-cover bg-surface"
