@@ -6,9 +6,9 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTrading } from '@/app/context/TradingContext';
 import NavbarSearch from '@/app/components/trading/NavbarSearch';
-import TrendingList from '@/app/components/trading/TrendingList';
+import SplitTokenLists from '@/app/components/trading/SplitTokenLists';
 import ProfileDropdown from '@/app/components/trading/ProfileDropdown';
-import { FiMenu, FiSearch, FiX, FiActivity } from 'react-icons/fi';
+import { FiMenu, FiSearch, FiX } from 'react-icons/fi';
 
 export default function TradingLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -29,7 +29,6 @@ export default function TradingLayout({ children }: { children: React.ReactNode 
     watchlistAddresses,
     toggleWatchlist,
     solPrice,
-    showPortfolio,
     setShowPortfolio,
     portfolioSummary,
     ready,
@@ -155,7 +154,7 @@ export default function TradingLayout({ children }: { children: React.ReactNode 
         {/* Left Sidebar: TrendingList - persistent across pages */}
         <div className={`
           ${showMobileTokens ? 'fixed inset-0 top-14 z-40 lg:static lg:inset-auto' : 'hidden lg:flex'}
-          w-70 2xl:w-85 flex-col shrink-0 min-h-0 bg-surface/90 lg:bg-surface/30 backdrop-blur-sm lg:backdrop-blur-none
+          flex-col shrink-0 min-h-0 bg-surface/90 lg:bg-surface/30 backdrop-blur-sm lg:backdrop-blur-none
         `}>
           <div className="flex items-center justify-between px-4 py-3 lg:hidden border-b border-bg-tertiary">
             <span className="font-semibold text-sm text-white">Tokens</span>
@@ -167,7 +166,7 @@ export default function TradingLayout({ children }: { children: React.ReactNode 
             </button>
           </div>
 
-          <TrendingList
+          <SplitTokenLists
             tokens={tokens}
             cryptoTokens={cryptoTokens}
             graduatedTokens={graduatedTokens}

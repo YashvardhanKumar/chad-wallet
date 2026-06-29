@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS trades (
   sol_amount NUMERIC NOT NULL,
   price NUMERIC NOT NULL DEFAULT 0,
   price_usd NUMERIC NOT NULL DEFAULT 0,
-  signature TEXT,
+  signature TEXT UNIQUE,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -91,5 +91,13 @@ CREATE TABLE IF NOT EXISTS follows (
   UNIQUE(follower_address, following_address)
 );
 ALTER TABLE follows DISABLE ROW LEVEL SECURITY;
+
+-- Create api_cache table for caching external API responses
+CREATE TABLE IF NOT EXISTS api_cache (
+  key TEXT PRIMARY KEY,
+  data JSONB NOT NULL,
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+ALTER TABLE api_cache DISABLE ROW LEVEL SECURITY;
 
 

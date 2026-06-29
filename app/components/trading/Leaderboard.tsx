@@ -2,12 +2,15 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
+import Link from 'next/link';
 import TraderHoverCard, { Avatar, PnlDisplay, hashToUsername, getProfileData } from './TraderHoverCard';
 
 interface LeaderboardEntry {
   owner: string;
   total_value: number;
   pnl: number;
+  displayName?: string;
+  username?: string;
 }
 
 interface Token {
@@ -161,7 +164,7 @@ export default function Leaderboard({ onSelectWallet }: LeaderboardProps) {
   const connectedEntry = connectedRank >= 0 ? entries[connectedRank] : null;
 
   return (
-    <div className="flex flex-col flex-1 min-h-0 gap-2">
+    <div className="flex flex-col h-full min-h-0 gap-2 overflow-hidden">
       {/* Time filter pills */}
       <div className="flex items-center gap-2 px-3 pt-2 pb-1">
         {(['24h', '7d', '30d', 'all'] as Duration[]).map((d) => (
@@ -206,7 +209,7 @@ export default function Leaderboard({ onSelectWallet }: LeaderboardProps) {
       )}
 
       {/* Leaderboard list */}
-      <div className="flex flex-col gap-px min-h-0 overflow-y-scroll overflow-x-hidden flex-1 px-2">
+      <div className="flex flex-col gap-px min-h-0 overflow-y-auto overflow-x-hidden flex-1 px-2">
         {isLoading ? (
           <div className="px-2 py-4">
             <div className="animate-pulse space-y-2">
@@ -224,14 +227,21 @@ export default function Leaderboard({ onSelectWallet }: LeaderboardProps) {
           </div>
         ) : (
           entries.map((entry, index) => {
-            const { username, handle } = hashToUsername(entry.owner, index);
+            const dbUsername = entry.username;
+            const dbDisplayName = entry.displayName;
+            const { username: fallbackUsername, handle: fallbackHandle } = hashToUsername(entry.owner, index);
+            
+            const usernameToDisplay = dbDisplayName || fallbackUsername;
+            const handleToDisplay = dbUsername ? `@${dbUsername}` : fallbackHandle;
             const isSelected = selectedWallet === entry.owner;
+            const profileKey = dbUsername || entry.owner;
+
             return (
               <div key={entry.owner} className="relative">
                 <TraderHoverCard owner={entry.owner} totalValue={entry.total_value} pnl={entry.pnl} index={index}>
-                  <a
-                    onClick={(e) => { e.preventDefault(); handleSelectWallet(entry.owner); }}
-                    href="#"
+                  <Link
+                    href={`/profile/${profileKey}`}
+                    onClick={() => handleSelectWallet(entry.owner)}
                     className={`flex gap-2.5 items-center px-2 py-1.5 rounded-lg min-w-0 transition-colors ${
                       isSelected
                         ? 'bg-bg-tertiary-solid'
@@ -241,9 +251,9 @@ export default function Leaderboard({ onSelectWallet }: LeaderboardProps) {
                     <MedalIcon rank={index} />
                     <Avatar addr={entry.owner} index={index} size={36} />
                     <div className="flex flex-col justify-between gap-0.5 min-w-0 shrink flex-1">
-                      <div className="truncate text-sm leading-5" translate="no">{username}</div>
+                      <div className="truncate text-sm leading-5" translate="no">{usernameToDisplay}</div>
                       <div className="text-text-secondary text-xs truncate leading-4" translate="no">
-                        <span>{handle}</span>
+                        <span>{handleToDisplay}</span>
                       </div>
                     </div>
                     <div className="flex flex-col items-end h-12 gap-1 justify-center shrink-0">
@@ -252,7 +262,7 @@ export default function Leaderboard({ onSelectWallet }: LeaderboardProps) {
                         <TokenStack tokens={trendingTokens} walletAddr={entry.owner} />
                       )}
                     </div>
-                  </a>
+                  </Link>
                 </TraderHoverCard>
               </div>
             );

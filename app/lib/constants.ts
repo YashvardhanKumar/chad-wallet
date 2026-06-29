@@ -96,11 +96,15 @@ export function shortenAddress(address?: string | null, chars = 4): string {
 }
 
 export function timeAgo(timestamp: number): string {
-  const seconds = Math.floor(Date.now() / 1000 - timestamp);
-  if (seconds < 60) return `${seconds}s ago`;
-  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
-  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
-  return `${Math.floor(seconds / 86400)}d ago`;
+  if (!timestamp) return "Just now";
+  // Normalize milliseconds (13-digit) to seconds (10-digit)
+  const secs = timestamp > 1e11 ? Math.floor(timestamp / 1000) : timestamp;
+  const diff = Math.max(0, Math.floor(Date.now() / 1000 - secs));
+
+  if (diff < 60) return `${diff}s ago`;
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  return `${Math.floor(diff / 86400)}d ago`;
 }
 
 export function getTradingViewSymbol(token: { address: string, symbol: string, dex?: string }): string | null {

@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { getSolPrice } from '@/app/lib/birdeye';
+import { getSolPrice, fetchWithRetry } from '@/app/lib/birdeye';
 
 const BIRDEYE_API_KEY = process.env.BIRDEYE_API_KEY || '';
 const BIRDEYE_API_BASE = 'https://public-api.birdeye.so';
@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 
 async function fetchPrice(address: string): Promise<number | null> {
   try {
-    const res = await fetch(
+    const res = await fetchWithRetry(
       `${BIRDEYE_API_BASE}/defi/price?address=${address}`,
       {
         headers: {

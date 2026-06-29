@@ -1,4 +1,5 @@
 import { getTokenTrades, getSolPrice } from '@/app/lib/birdeye';
+import { supabase } from '@/app/lib/supabase';
 import { NextResponse } from 'next/server';
 
 /** Generate a deterministic username from a wallet address */
@@ -42,18 +43,43 @@ export async function GET(request: Request) {
   }
 
   const trades = await getTokenTrades(address, limit);
-  const solPrice = await getSolPrice();
-  const sPrice = solPrice > 0 ? solPrice : 150;
 
-  const mapped = trades.map((t: any) => ({
-    userId: t.owner,
-    displayName: walletToUsername(t.owner || ''),
-    usdAmount: (t.volumeUSD || 0) / sPrice,
-    marketCap: 0,
-    price: 0,
-    tradeType: t.side?.toUpperCase() || 'BUY',
-    unixTime: t.blockUnixTime
-  }));
+  // Query Supabase for registered user profiles to get custom avatars and display names
+  const owners = Array.from(new Set(trades.map((t: any) => t.owner).filter(Boolean))) as string[];
+  const { data: dbUsers } = owners.length > 0
+    ? await supabase
+        .from('users')
+        .select('wallet_address, display_name, avatar_url')
+        .in('wallet_address', owners)
+    : { data: null };
+
+  const userMap = new Map<string, { displayName?: string; avatarUrl?: string }>();
+  if (dbUsers) {
+    dbUsers.forEach((u: any) => {
+      userMap.set(u.wallet_address.toLowerCase(), {
+        displayName: u.display_name,
+        avatarUrl: u.avatar_url,
+      });
+    });
+  }
+
+  const mapped = trades.map((t: any) => {
+    const ownerKey = (t.owner || '').toLowerCase();
+    const dbUser = userMap.get(ownerKey);
+    const amountVal = t.side === 'buy' ? t.to?.uiAmount || 0 : t.from?.uiAmount || 0;
+    const tokenPriceUsd = amountVal > 0 ? (t.volumeUSD || 0) / amountVal : 0;
+    return {
+      userId: t.owner,
+      displayName: dbUser?.displayName || walletToUsername(t.owner || ''),
+      avatarUrl: dbUser?.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${t.owner || 'Anonymous'}`,
+      usdAmount: t.volumeUSD || 0,
+      marketCap: 0,
+      price: tokenPriceUsd,
+      tradeType: t.side?.toUpperCase() || 'BUY',
+      unixTime: t.blockUnixTime,
+      amount: amountVal
+    };
+  });
 
   return NextResponse.json({ trades: mapped });
 }

@@ -99,7 +99,7 @@ export async function getUserByWallet(walletAddress: string) {
   const { data, error } = await supabase
     .from('users')
     .select('*')
-    .eq('wallet_address', walletAddress)
+    .ilike('wallet_address', walletAddress)
     .maybeSingle();
 
   if (error) {
@@ -151,7 +151,7 @@ export async function getTrades(walletAddress: string): Promise<TradeRecord[]> {
   const { data, error } = await supabase
     .from('trades')
     .select('*')
-    .eq('wallet_address', walletAddress)
+    .ilike('wallet_address', walletAddress)
     .order('created_at', { ascending: false });
 
   if (error && isTableNotFound(error)) {
@@ -262,7 +262,7 @@ export async function getWatchlistAddresses(walletAddress: string): Promise<stri
   const { data, error } = await supabase
     .from('watchlist')
     .select('token_address')
-    .eq('wallet_address', walletAddress);
+    .ilike('wallet_address', walletAddress);
 
   if (error && isTableNotFound(error)) {
     return lsGetWatchlist(walletAddress);
@@ -278,7 +278,7 @@ export async function getWatchlistTokens(walletAddress: string): Promise<{ token
   const { data, error } = await supabase
     .from('watchlist')
     .select('token_address, token_symbol, token_name, token_logo_uri')
-    .eq('wallet_address', walletAddress);
+    .ilike('wallet_address', walletAddress);
 
   if (error && isTableNotFound(error)) {
     return [];
@@ -296,7 +296,7 @@ export async function getHoldings(walletAddress: string): Promise<HoldingRecord[
   const { data, error } = await supabase
     .from('holdings')
     .select('*')
-    .eq('wallet_address', walletAddress);
+    .ilike('wallet_address', walletAddress);
 
   if (error && isTableNotFound(error)) {
     return [];

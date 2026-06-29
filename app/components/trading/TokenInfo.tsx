@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import Image from "next/image";
 import { usePrivy } from "@privy-io/react-auth";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/app/lib/supabase";
 import { CldUploadWidget } from "next-cloudinary";
 import { Group, Panel, Separator } from "react-resizable-panels";
@@ -41,6 +43,9 @@ interface Token {
   marketCap: number;
   liquidity?: number;
   dex?: string;
+  isGraduated?: boolean;
+  bonding?: number;
+  age?: string;
 }
 
 interface PricePoint {
@@ -83,9 +88,10 @@ const TIME_RANGES = [
 ] as const;
 
 export default function TokenInfo({ token }: { token: Token }) {
+  const router = useRouter();
   const { user, authenticated, login } = usePrivy();
-  const [timeRange, setTimeRange] =
-    useState<(typeof TIME_RANGES)[number]>("1D");
+  const [candleInterval, setCandleInterval] = useState<"1m" | "5m" | "15m" | "30m" | "1H" | "4H" | "1D">("15m");
+  const [timeLimit, setTimeLimit] = useState<"6H" | "12H" | "1D" | "3D" | "1W" | "1M" | "3M">("1D");
   const [priceHistory, setPriceHistory] = useState<PricePoint[]>([]);
   const [chartMode, setChartMode] = useState<"price" | "mcap">("price");
   const [rawHistory, setRawHistory] = useState<any[]>([]);
@@ -95,6 +101,14 @@ export default function TokenInfo({ token }: { token: Token }) {
   );
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
+  const [chartRef, setChartRef] = useState<any>(null);
+  const [seriesRef, setSeriesRef] = useState<any>(null);
+  const [scrollTrigger, setScrollTrigger] = useState(0);
+
+  const handleChartInit = useCallback((chart: any, series: any) => {
+    setChartRef(chart);
+    setSeriesRef(series);
+  }, []);
   const [htmlMarkers, setHtmlMarkers] = useState<
     {
       id: string;
@@ -132,7 +146,15 @@ export default function TokenInfo({ token }: { token: Token }) {
   const [filterThesisOnly, setFilterThesisOnly] = useState(false);
   const [filterFriendsOnly, setFilterFriendsOnly] = useState(false);
   const [copied, setCopied] = useState(false);
-  const dexIcon = getDexIcon(token.dex);
+  let resolvedDex = token.dex;
+  if (!resolvedDex) {
+    if (token.isGraduated) {
+      resolvedDex = 'Raydium';
+    } else if (token.bonding !== undefined && token.bonding < 100) {
+      resolvedDex = 'Pump.fun';
+    }
+  }
+  const dexIcon = resolvedDex ? getDexIcon(resolvedDex) : '';
 
   const copyAddress = async () => {
     try {
@@ -194,15 +216,37 @@ export default function TokenInfo({ token }: { token: Token }) {
           `/api/token-metadata?address=${token.address}`,
         );
         const { metadata } = await metaRes.json();
-        if (metadata?.extensions) {
-          setSocialLinks({
-            website: metadata.extensions.website,
-            twitter: metadata.extensions.twitter,
-            telegram: metadata.extensions.telegram,
-            discord: metadata.extensions.discord,
-            medium: metadata.extensions.medium,
-          });
-        }
+        
+        const extensions = metadata?.extensions || metadata?.jupiter?.extensions || {};
+        
+        const formatTwitter = (val?: string) => {
+          if (!val) return undefined;
+          if (val.startsWith('http')) return val;
+          return `https://x.com/${val.replace('@', '')}`;
+        };
+        const formatTelegram = (val?: string) => {
+          if (!val) return undefined;
+          if (val.startsWith('http')) return val;
+          return `https://t.me/${val}`;
+        };
+        const formatDiscord = (val?: string) => {
+          if (!val) return undefined;
+          if (val.startsWith('http')) return val;
+          return `https://discord.gg/${val}`;
+        };
+        const formatWebsite = (val?: string) => {
+          if (!val) return undefined;
+          if (val.startsWith('http')) return val;
+          return `https://${val}`;
+        };
+
+        setSocialLinks({
+          website: formatWebsite(extensions.website || metadata?.website),
+          twitter: formatTwitter(extensions.twitter || extensions.twitter_username || metadata?.twitter),
+          telegram: formatTelegram(extensions.telegram || metadata?.telegram),
+          discord: formatDiscord(extensions.discord || metadata?.discord),
+          medium: formatWebsite(extensions.medium || metadata?.medium),
+        });
       } catch (e) {
         console.error("Failed to fetch token metadata", e);
       }
@@ -250,10 +294,18 @@ export default function TokenInfo({ token }: { token: Token }) {
     async function fetchChartData() {
       setChartLoading(true);
       const now = Math.floor(Date.now() / 1000);
+      let timeFrom = now - 24 * 3600; // default to 1 day
+      if (timeLimit === "6H") timeFrom = now - 6 * 3600;
+      else if (timeLimit === "12H") timeFrom = now - 12 * 3600;
+      else if (timeLimit === "1D") timeFrom = now - 24 * 3600;
+      else if (timeLimit === "3D") timeFrom = now - 3 * 24 * 3600;
+      else if (timeLimit === "1W") timeFrom = now - 7 * 24 * 3600;
+      else if (timeLimit === "1M") timeFrom = now - 30 * 24 * 3600;
+      else if (timeLimit === "3M") timeFrom = now - 90 * 24 * 3600;
 
       try {
         const res = await fetch(
-          `/api/history?address=${token.address}&type=${timeRange}&timeTo=${now}`,
+          `/api/history?address=${token.address}&type=${candleInterval}&timeFrom=${timeFrom}&timeTo=${now}`,
         );
         const { history } = await res.json();
 
@@ -269,7 +321,7 @@ export default function TokenInfo({ token }: { token: Token }) {
       setChartLoading(false);
     }
     fetchChartData();
-  }, [token.address, timeRange]);
+  }, [token.address, candleInterval, timeLimit]);
 
   useEffect(() => {
     if (rawHistory.length > 0) {
@@ -294,26 +346,37 @@ export default function TokenInfo({ token }: { token: Token }) {
     }
   }, [rawHistory, chartMode, token.marketCap, token.price]);
 
-  // Measure chart container size dynamically
+  // Measure chart container size dynamically using ResizeObserver
   useEffect(() => {
     if (!chartContainerRef.current) return;
-    const container = chartContainerRef.current;
-
-    // Set initial size
-    setContainerSize({
-      width: container.clientWidth || 0,
-      height: container.clientHeight || 380,
+    const resizeObserver = new ResizeObserver((entries) => {
+      if (!entries || entries.length === 0) return;
+      const { width, height } = entries[0].contentRect;
+      setContainerSize({ width, height });
     });
-
-    const observer = new ResizeObserver((entries) => {
-      if (entries[0]) {
-        const { width, height } = entries[0].contentRect;
-        setContainerSize({ width, height });
-      }
-    });
-    observer.observe(container);
-    return () => observer.disconnect();
+    resizeObserver.observe(chartContainerRef.current);
+    return () => resizeObserver.disconnect();
   }, []);
+
+  // Subscribe to lightweight-charts timescale visible range changes
+  useEffect(() => {
+    if (!chartRef || !seriesRef) return;
+
+    const updateCoords = () => {
+      setScrollTrigger((prev) => prev + 1);
+    };
+
+    const timeScale = chartRef.timeScale();
+    timeScale.subscribeVisibleLogicalRangeChange(updateCoords);
+
+    return () => {
+      if (chartRef) {
+        try {
+          chartRef.timeScale().unsubscribeVisibleLogicalRangeChange(updateCoords);
+        } catch {}
+      }
+    };
+  }, [chartRef, seriesRef]);
 
   // Recalculate htmlMarkers coordinate overlays
   useEffect(() => {
@@ -374,6 +437,8 @@ export default function TokenInfo({ token }: { token: Token }) {
           }
         }
 
+        holderTime = Math.max(minTime, Math.min(maxTime, holderTime));
+
         // Snap to closest priceHistory timestamp
         let closestPoint: any = null;
         let minDiff = Infinity;
@@ -390,11 +455,12 @@ export default function TokenInfo({ token }: { token: Token }) {
           if (!matchedBars.has(barTime)) {
             matchedBars.set(barTime, []);
           }
+          const avatarUrl = holder.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${holder.address || holder.username}`;
           matchedBars.get(barTime)!.push({
             type: "thesis",
             address: holder.address,
             username: holder.username,
-            avatarUrl: holder.avatarUrl,
+            avatarUrl,
             createdAt: holder.thesisCreatedAt,
             content: holder.thesis,
             thesisHearts: holder.thesisHearts,
@@ -405,8 +471,13 @@ export default function TokenInfo({ token }: { token: Token }) {
 
     // 2. Process Swaps
     if (showMySwaps && liveTrades.length > 0) {
+      const userAddress = user?.wallet?.address || "";
       liveTrades.forEach((trade) => {
-        const tradeTime = trade.unixTime; // Unix timestamp
+        if (!userAddress || trade.userId?.toLowerCase() !== userAddress.toLowerCase()) return;
+
+        let tradeTime = trade.unixTime; // Unix timestamp
+        tradeTime = Math.max(minTime, Math.min(maxTime, tradeTime));
+
         // Snap to closest priceHistory timestamp
         let closestPoint: any = null;
         let minDiff = Infinity;
@@ -423,16 +494,20 @@ export default function TokenInfo({ token }: { token: Token }) {
           if (!matchedBars.has(barTime)) {
             matchedBars.set(barTime, []);
           }
-          const formattedAmount = typeof trade.usdAmount === "number"
-            ? trade.usdAmount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 4 }) + " SOL"
-            : trade.usdAmount;
+          const avatarUrl = trade.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${trade.userId || trade.displayName}`;
+          const formattedTokenAmount = typeof trade.amount === "number"
+            ? trade.amount.toLocaleString("en-US", { maximumFractionDigits: 2 })
+            : "0";
+          const formattedUSD = typeof trade.usdAmount === "number"
+            ? "$" + trade.usdAmount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+            : "$0";
           matchedBars.get(barTime)!.push({
             type: "swap",
             address: trade.userId,
             username: trade.displayName,
-            avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${trade.userId || trade.displayName}`,
+            avatarUrl,
             createdAt: trade.unixTime * 1000,
-            content: `${trade.tradeType === "BUY" ? "Bought" : "Sold"} ${formattedAmount} of ${token.symbol}`,
+            content: `${trade.tradeType === "BUY" ? "Bought" : "Sold"} ${formattedTokenAmount} ${token.symbol} (${formattedUSD})`,
             tradeType: trade.tradeType,
             amount: trade.usdAmount,
           });
@@ -442,17 +517,27 @@ export default function TokenInfo({ token }: { token: Token }) {
 
     const markersList: any[] = [];
     matchedBars.forEach((barItems, barTime) => {
-      const fx = (barTime - minTime) / (maxTime - minTime || 1);
-
       const closestPoint = priceHistory.find(
         (p) => (p.time as number) === barTime
       );
       const priceVal = closestPoint ? closestPoint.high : minPrice;
-      const fy = (priceVal - minPrice) / (maxPrice - minPrice || 1);
 
-      // Interpolate coordinates
-      const x = leftOffset + fx * chartWidth;
-      const y = topOffset + (1 - fy) * chartHeight - 12;
+      let x = -999;
+      let y = -999;
+
+      if (chartRef && seriesRef) {
+        const timeScale = chartRef.timeScale();
+        const coordX = timeScale.timeToCoordinate(barTime);
+        const coordY = seriesRef.priceToCoordinate(priceVal);
+        if (coordX !== null) x = coordX;
+        if (coordY !== null) y = coordY - 12;
+      } else {
+        // Fallback linear interpolation
+        const fx = (barTime - minTime) / (maxTime - minTime || 1);
+        const fy = (priceVal - minPrice) / (maxPrice - minPrice || 1);
+        x = leftOffset + fx * chartWidth;
+        y = topOffset + (1 - fy) * chartHeight - 12;
+      }
 
       if (
         x >= 0 &&
@@ -486,6 +571,9 @@ export default function TokenInfo({ token }: { token: Token }) {
     liveTrades,
     chartMode,
     containerSize,
+    chartRef,
+    seriesRef,
+    scrollTrigger,
   ]);
 
   const filteredHolders = holders.filter((h) => {
@@ -511,18 +599,10 @@ export default function TokenInfo({ token }: { token: Token }) {
               style={{ width: 40, height: 40 }}
             >
               <TokenLogo token={token} size={40} />
-              {verified && (
-                <div
-                  className="absolute flex items-center justify-center"
-                  style={{ bottom: -4, right: -4 }}
-                >
-                  <HiMiniCheckBadge size={18} className="text-blue-500" />
-                </div>
-              )}
               {dexIcon && (
                 <div
                   className="absolute flex items-center justify-center overflow-hidden rounded-full border-2 border-background bg-bg-primary"
-                  style={{ bottom: -4, left: -4, width: 18, height: 18 }}
+                  style={{ bottom: -4, right: -4, width: 18, height: 18 }}
                 >
                   <Image
                     src={dexIcon}
@@ -532,6 +612,14 @@ export default function TokenInfo({ token }: { token: Token }) {
                     className="object-contain"
                     unoptimized
                   />
+                </div>
+              )}
+              {verified && (
+                <div
+                  className="absolute flex items-center justify-center"
+                  style={{ bottom: -4, left: dexIcon ? -4 : undefined, right: dexIcon ? undefined : -4 }}
+                >
+                  <HiMiniCheckBadge size={18} className="text-blue-500" />
                 </div>
               )}
             </div>
@@ -864,13 +952,60 @@ export default function TokenInfo({ token }: { token: Token }) {
         <Panel defaultSize={55} minSize={20}>
           <div className="relative flex flex-col h-full">
             {/* TradingView Toolbar Style Controls */}
-        <div className="relative w-full h-full">
-          <div ref={chartContainerRef} className="w-full h-full">
-            <TradingViewWidget
-              tokenAddress={token.address}
-              tokenSymbol={token.symbol}
-            />
-          </div>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 px-3 py-1.5 bg-bg-secondary/40 border-b border-bg-tertiary/60 text-xs shrink-0 select-none">
+              {/* Left Side: Candle Intervals */}
+              <div className="flex items-center gap-1.5">
+                <span className="text-text-tertiary font-medium mr-1">Interval:</span>
+                {(["1m", "5m", "15m", "30m", "1H", "4H", "1D"] as const).map((interval) => (
+                  <button
+                    key={interval}
+                    type="button"
+                    onClick={() => setCandleInterval(interval)}
+                    className={`px-2 py-0.5 rounded-md font-semibold transition-all ${
+                      candleInterval === interval
+                        ? "bg-accent text-white shadow-[0_0_8px_rgba(255,111,233,0.3)]"
+                        : "text-text-secondary hover:text-white hover:bg-bg-tertiary"
+                    }`}
+                  >
+                    {interval}
+                  </button>
+                ))}
+              </div>
+
+              {/* Right Side: Time Range Limits */}
+              <div className="flex items-center gap-1.5">
+                <span className="text-text-tertiary font-medium mr-1">Range:</span>
+                {(["6H", "12H", "1D", "3D", "1W", "1M", "3M"] as const).map((range) => (
+                  <button
+                    key={range}
+                    type="button"
+                    onClick={() => setTimeLimit(range)}
+                    className={`px-2 py-0.5 rounded-md font-semibold transition-all ${
+                      timeLimit === range
+                        ? "bg-accent/20 border border-accent/40 text-accent"
+                        : "text-text-secondary hover:text-white hover:bg-bg-tertiary border border-transparent"
+                    }`}
+                  >
+                    {range}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="relative w-full flex-1 min-h-0">
+              <div ref={chartContainerRef} className="w-full h-full">
+                <TradingViewWidget
+                  tokenAddress={token.address}
+                  tokenSymbol={token.symbol}
+                  priceHistory={priceHistory}
+                  trades={liveTrades.filter(
+                    (t) =>
+                      showMySwaps &&
+                      (user?.wallet?.address || "").toLowerCase() === t.userId?.toLowerCase()
+                  )}
+                  onChartInit={handleChartInit}
+                />
+              </div>
           {/* HTML Thesis & Swaps Avatars Overlay */}
           {(showThesisOverlay || showMySwaps) &&
             htmlMarkers.map((marker) => (
@@ -883,32 +1018,72 @@ export default function TokenInfo({ token }: { token: Token }) {
                   willChange: "transform",
                 }}
               >
-                <div className="relative rounded-full border-2 border-bg-primary transition-[transform,box-shadow] duration-150 hover:scale-110 active:scale-95 cursor-pointer shadow-[0_0_10px_var(--color-accent-primary)]">
-                  <div
-                    className="rounded-full flex items-center justify-center shrink-0"
-                    style={{
-                      height: 22,
-                      width: 22,
-                      backgroundColor: getProfileColor(marker.address || marker.id),
-                    }}
-                  >
-                    <img
-                      className="w-[70%] h-[70%] object-cover rounded-full"
-                      src={marker.avatarUrl}
-                      alt="Avatar"
-                    />
+                {marker.items.length > 1 ? (
+                  <div className="flex flex-col items-center">
+                    {marker.items.slice(0, 3).map((item: any, idx: number) => {
+                      const avatarUrl = item.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${item.address || item.username}`;
+                      return (
+                        <div
+                          key={idx}
+                          style={{
+                            marginTop: idx === 0 ? 0 : -8,
+                            zIndex: 10 - idx,
+                          }}
+                        >
+                          <Link
+                            href={`/profile/${item.address}`}
+                            className="relative block rounded-full border-2 border-bg-primary transition-shadow duration-150 hover:scale-110 active:scale-95 cursor-pointer"
+                          >
+                            <div
+                              className="rounded-full flex items-center justify-center shrink-0"
+                              style={{
+                                height: 22,
+                                width: 22,
+                                backgroundColor: getProfileColor(item.address || item.username),
+                              }}
+                            >
+                              <img
+                                className="w-[70%] h-[70%] object-cover rounded-full"
+                                src={avatarUrl}
+                                alt="Avatar"
+                              />
+                            </div>
+                          </Link>
+                        </div>
+                      );
+                    })}
                   </div>
-                </div>
+                ) : (
+                  <Link
+                    href={`/profile/${marker.address}`}
+                    className="relative block rounded-full border-2 border-bg-primary transition-[transform,box-shadow] duration-150 hover:scale-110 active:scale-95 cursor-pointer shadow-[0_0_10px_var(--color-accent-primary)]"
+                  >
+                    <div
+                      className="rounded-full flex items-center justify-center shrink-0"
+                      style={{
+                        height: 22,
+                        width: 22,
+                        backgroundColor: getProfileColor(marker.address || marker.id),
+                      }}
+                    >
+                      <img
+                        className="w-[70%] h-[70%] object-cover rounded-full"
+                        src={marker.avatarUrl}
+                        alt="Avatar"
+                      />
+                    </div>
+                  </Link>
+                )}
 
                 {/* Hover Card matching screenshot reference */}
-                <div className="absolute z-20 pointer-events-auto cursor-pointer bottom-full pb-2 left-1/2 -translate-x-1/2 opacity-0 scale-95 pointer-events-none group-hover:opacity-100 group-hover:scale-100 transition-all duration-150">
+                <div className="absolute z-20 pointer-events-auto cursor-pointer bottom-full pb-2 left-1/2 -translate-x-1/2 opacity-0 scale-95 pointer-events-none group-hover:opacity-100 group-hover:scale-100 group-hover:pointer-events-auto transition-all duration-150">
                   <div className="bg-bg-primary/60 backdrop-blur-sm border border-bg-tertiary rounded-2xl p-3 shadow-lg w-80 flex flex-col gap-1.5 max-h-60 overflow-y-auto custom-scrollbar">
                     {marker.items.map((item: any, idx: number) => {
                       const hAvatar =
                         item.avatarUrl ||
                         `https://api.dicebear.com/7.x/avataaars/svg?seed=${item.address || item.username}`;
                       const formattedDate = item.createdAt
-                        ? new Date(item.createdAt).toLocaleDateString(
+                        ? new Date(item.createdAt).toLocaleString(
                             "en-US",
                             {
                               month: "short",
@@ -932,23 +1107,28 @@ export default function TokenInfo({ token }: { token: Token }) {
                           className="flex flex-col gap-1.5 border-b border-[#cbd0eb1a]/40 pb-2.5 last:border-0 last:pb-0 last:border-transparent text-left"
                         >
                           <div className="flex items-center gap-2">
-                            <div
-                              className="rounded-full flex items-center justify-center shrink-0"
-                              style={{
-                                height: 20,
-                                width: 20,
-                                backgroundColor: getProfileColor(item.address || item.username),
-                              }}
+                            <Link
+                              href={`/profile/${item.address}`}
+                              className="flex items-center gap-2 hover:opacity-80 transition-opacity"
                             >
-                              <img
-                                className="w-[70%] h-[70%] object-cover rounded-full"
-                                src={hAvatar}
-                                alt=""
-                              />
-                            </div>
-                            <div className="text-sm text-text-primary truncate max-w-[110px]">
-                              {item.username || "Anonymous"}
-                            </div>
+                              <div
+                                className="rounded-full flex items-center justify-center shrink-0"
+                                style={{
+                                  height: 20,
+                                  width: 20,
+                                  backgroundColor: getProfileColor(item.address || item.username),
+                                }}
+                              >
+                                <img
+                                  className="w-[70%] h-[70%] object-cover rounded-full"
+                                  src={hAvatar}
+                                  alt=""
+                                />
+                              </div>
+                              <div className="text-sm text-text-primary truncate max-w-[110px] font-semibold">
+                                {item.username || "Anonymous"}
+                              </div>
+                            </Link>
                             <div
                               className="w-fit rounded-sm py-px px-1 text-xs font-bold flex items-center gap-1"
                               style={tagStyle}
@@ -1114,9 +1294,9 @@ export default function TokenInfo({ token }: { token: Token }) {
                       </div>
                     ) : (
                       filteredHolders.map((h, i) => (
-                        <button
+                        <Link
                           key={i}
-                          type="button"
+                          href={`/profile/${h.address}`}
                           className="group py-2 grid items-center text-left gap-6 hover:bg-bg-secondary min-w-full grid-cols-[1fr_auto] @[400px]:grid-cols-[12rem_7.5rem_6.25rem_6.25rem_20rem] @[900px]:grid-cols-[minmax(0,220px)_7.5rem_6.25rem_6.25rem_minmax(0,1fr)] border-b border-bg-tertiary/10"
                         >
                           {/* Trader Column (sticky) */}
@@ -1322,7 +1502,7 @@ export default function TokenInfo({ token }: { token: Token }) {
                               <span>{h.thesis || "—"}</span>
                             </div>
                           </div>
-                        </button>
+                        </Link>
                       ))
                     )}
                   </div>
@@ -1376,23 +1556,28 @@ export default function TokenInfo({ token }: { token: Token }) {
                         displayedTrades.map((t, i) => (
                           <tr
                             key={i}
+                            onClick={() => router.push(`/profile/${t.userId}`)}
                             className="hover:bg-bg-tertiary transition-colors cursor-pointer group"
                           >
                             <td className="py-2.5 px-3 lg:px-4">
                               <div className="flex items-center gap-2">
                                 <div className="w-6 h-6 rounded-full bg-surface-hover overflow-hidden shrink-0">
                                   <Image
-                                    src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${t.userId}`}
+                                    src={t.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${t.userId}`}
                                     alt=""
                                     width={24}
                                     height={24}
                                     unoptimized
                                   />
                                 </div>
-                                <span className="text-[13px] font-medium text-white group-hover:underline">
-                                  {t.displayName ||
-                                    shortenAddress(t.userId || "")}
-                                </span>
+                                <div className="flex flex-col text-left">
+                                  <span className="text-[13px] font-medium text-white group-hover:underline leading-none">
+                                    {t.displayName}
+                                  </span>
+                                  <span className="text-[10px] text-text-tertiary">
+                                    @{t.username || shortenAddress(t.userId || "")}
+                                  </span>
+                                </div>
                               </div>
                             </td>
                             <td className="py-2.5">
@@ -1418,7 +1603,7 @@ export default function TokenInfo({ token }: { token: Token }) {
                             </td>
                             <td className="py-2.5 pr-3 lg:pr-4 text-right">
                               <span className="text-[11px] text-text-tertiary">
-                                {timeAgo(t.unixTime * 1000)}
+                                {timeAgo(t.unixTime)}
                               </span>
                             </td>
                           </tr>
@@ -1549,19 +1734,28 @@ export default function TokenInfo({ token }: { token: Token }) {
                             className="bg-bg-tertiary rounded-xl p-3 border border-bg-tertiary"
                           >
                             <div className="flex items-center gap-2 mb-2">
-                              <div className="w-6 h-6 rounded-full bg-surface-hover overflow-hidden">
-                                <Image
-                                  src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${t.displayName || t.user_id}`}
-                                  alt=""
-                                  width={24}
-                                  height={24}
-                                  unoptimized
-                                />
-                              </div>
-                              <span className="text-xs font-medium text-text-secondary">
-                                {t.displayName ||
-                                  shortenAddress(t.user_id || "")}
-                              </span>
+                              <Link
+                                href={`/profile/${t.user_id}`}
+                                className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+                              >
+                                <div className="w-6 h-6 rounded-full bg-surface-hover overflow-hidden">
+                                  <Image
+                                    src={t.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${t.displayName || t.user_id}`}
+                                    alt=""
+                                    width={24}
+                                    height={24}
+                                    unoptimized
+                                  />
+                                </div>
+                                <div className="flex flex-col text-left">
+                                  <span className="text-xs font-semibold text-white leading-none">
+                                    {t.displayName}
+                                  </span>
+                                  <span className="text-[10px] text-text-tertiary">
+                                    @{t.username || shortenAddress(t.user_id || "")}
+                                  </span>
+                                </div>
+                              </Link>
                               {t.authorTrade?.unrealizedPnlUsd && (
                                 <span
                                   className={`text-[10px] ml-2 px-1.5 py-0.5 rounded font-medium ${t.authorTrade.unrealizedPnlUsd >= 0 ? "bg-green/20 text-green" : "bg-red/20 text-red"}`}
@@ -1573,8 +1767,8 @@ export default function TokenInfo({ token }: { token: Token }) {
                                 </span>
                               )}
                               <span className="text-[10px] text-text-tertiary ml-auto">
-                                {t.created_at
-                                  ? new Date(t.created_at).toLocaleDateString()
+                               {t.created_at
+                                  ? timeAgo(Math.floor(new Date(t.created_at).getTime() / 1000))
                                   : "Just now"}
                               </span>
                             </div>

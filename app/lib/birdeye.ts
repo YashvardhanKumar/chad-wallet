@@ -1,3 +1,5 @@
+import { supabase } from './supabase';
+
 // BirdEye API client for fetching Solana token data
 // API docs: https://docs.birdeye.so/reference
 
@@ -201,18 +203,160 @@ export interface TradeItem {
   volumeUSD: number;
 }
 
-/**
- * Fetch with exponential backoff for rate limits (429)
- */
-async function fetchWithRetry(url: string, options: RequestInit, maxRetries = 3): Promise<Response> {
-  for (let attempt = 0; attempt < maxRetries; attempt++) {
-    const res = await fetch(url, options);
-    if (res.status !== 429) return res;
-    const wait = Math.min(1000 * Math.pow(2, attempt), 8000);
-    console.warn(`Rate limited (429), retrying in ${wait}ms (attempt ${attempt + 1}/${maxRetries})`);
-    await new Promise(r => setTimeout(r, wait));
+// --- Global HTTP API Response Caches ---
+const apiMemoryCache = new Map<string, { data: any; timestamp: number }>();
+
+async function getCachedData(cacheKey: string, ttl: number): Promise<any | null> {
+  const now = Date.now();
+  
+  // 1. Check in-memory cache first
+  const mem = apiMemoryCache.get(cacheKey);
+  if (mem && now - mem.timestamp < ttl) {
+    return mem.data;
   }
-  return fetch(url, options);
+  
+  // 2. Check Supabase cache
+  try {
+    const { data, error } = await supabase
+      .from('api_cache')
+      .select('data, updated_at')
+      .eq('key', cacheKey)
+      .single();
+      
+    if (data && !error) {
+      const updatedAt = new Date(data.updated_at).getTime();
+      if (now - updatedAt < ttl) {
+        // Update in-memory cache
+        apiMemoryCache.set(cacheKey, { data: data.data, timestamp: updatedAt });
+        return data.data;
+      }
+    }
+  } catch (e) {
+    console.error('Supabase cache read failed, falling back to memory/API:', e);
+  }
+  
+  return null;
+}
+
+async function getStaleCachedData(cacheKey: string): Promise<any | null> {
+  try {
+    const { data, error } = await supabase
+      .from('api_cache')
+      .select('data')
+      .eq('key', cacheKey)
+      .single();
+      
+    if (data && !error) {
+      return data.data;
+    }
+  } catch (e) {
+    console.error('Supabase stale cache read failed:', e);
+  }
+  return null;
+}
+
+async function setCachedData(cacheKey: string, payload: any): Promise<void> {
+  const now = Date.now();
+  
+  // 1. Update in-memory cache
+  apiMemoryCache.set(cacheKey, { data: payload, timestamp: now });
+  
+  // 2. Persist to Supabase
+  try {
+    await supabase.from('api_cache').upsert({
+      key: cacheKey,
+      data: payload,
+      updated_at: new Date().toISOString()
+    });
+  } catch (e) {
+    console.error('Supabase cache write failed:', e);
+  }
+}
+
+/**
+ * Fetch with exponential backoff for rate limits (429) and shared caching to Supabase / In-Memory
+ */
+export async function fetchWithRetry(url: string, options: RequestInit, maxRetries = 3): Promise<Response> {
+  // Determine TTL based on the request URL
+  let ttl = 5 * 60 * 1000; // 5 minutes default
+  if (
+    url.includes('/meta-data') ||
+    url.includes('/ohlcv') ||
+    url.includes('/search') ||
+    url.includes('/leaderboard')
+  ) {
+    ttl = 60 * 60 * 1000; // 1 hour
+  }
+
+  // Construct cache key
+  const method = options?.method || 'GET';
+  const headersObj = options?.headers || {};
+  const chain = (headersObj as any)?.['x-chain'] || (headersObj as any)?.['X-CHAIN'] || 'solana';
+  const body = options?.body ? (typeof options.body === 'string' ? options.body : JSON.stringify(options.body)) : '';
+  const cacheKey = `${method}:${chain}:${url}:${body}`;
+
+  // Try to load from cache
+  const cached = await getCachedData(cacheKey, ttl);
+  if (cached !== null) {
+    return new Response(JSON.stringify(cached), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  let res: Response | null = null;
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    res = await fetch(url, options);
+    
+    if (res.status === 429) {
+      // Fallback immediately to stale cache if rate limited
+      const staleData = await getStaleCachedData(cacheKey);
+      if (staleData !== null) {
+        console.warn(`Rate limited (429) on ${url}, returning stale cached data immediately.`);
+        return new Response(JSON.stringify(staleData), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+      
+      const jitter = Math.random() * 500;
+      const wait = Math.min(1000 * Math.pow(2, attempt) + jitter, 8000);
+      console.warn(`Rate limited (429), retrying in ${Math.round(wait)}ms (attempt ${attempt + 1}/${maxRetries})`);
+      await new Promise(r => setTimeout(r, wait));
+      continue;
+    }
+    
+    break;
+  }
+
+  if (!res) {
+    res = await fetch(url, options);
+  }
+
+  // If we still have a 429 and have stale cache, try fallback one last time
+  if (res.status === 429) {
+    const staleData = await getStaleCachedData(cacheKey);
+    if (staleData !== null) {
+      console.warn(`Rate limit failure on ${url}, returning stale cached data.`);
+      return new Response(JSON.stringify(staleData), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+  }
+
+  // Cache and return if successful
+  if (res.ok) {
+    try {
+      const clone = res.clone();
+      const payload = await clone.json();
+      await setCachedData(cacheKey, payload);
+    } catch (e) {
+      console.error('Failed to parse or cache response:', e);
+    }
+  }
+
+  return res;
 }
 
 function mapJupiterToken(t: any): TrendingToken {
@@ -410,7 +554,7 @@ export async function getCryptoTokens(limit = 30): Promise<TrendingToken[]> {
   for (const chain of chains) {
     if (results.length >= limit) break;
     try {
-      const res = await fetch(
+      const res = await fetchWithRetry(
         `${BIRDEYE_API_BASE}/defi/token_trending?sort_by=rank&sort_type=asc&offset=0&limit=${limit}`,
         {
           headers: { 'X-API-KEY': BIRDEYE_API_KEY, 'x-chain': chain, accept: 'application/json' },
@@ -459,7 +603,7 @@ export async function getCryptoTokens(limit = 30): Promise<TrendingToken[]> {
  */
 export async function getBondingTokens(limit = 30): Promise<TrendingToken[]> {
   try {
-    const res = await fetch(
+    const res = await fetchWithRetry(
       `${BIRDEYE_API_BASE}/defi/token_trending?sort_by=rank&sort_type=asc&offset=0&limit=${limit}`,
       {
         headers: getHeaders(),
@@ -511,7 +655,7 @@ export async function getBondingTokens(limit = 30): Promise<TrendingToken[]> {
  */
 export async function getGraduatedTokens(limit = 30): Promise<TrendingToken[]> {
   try {
-    const res = await fetch(
+    const res = await fetchWithRetry(
       `${BIRDEYE_API_BASE}/defi/token_trending?sort_by=rank&sort_type=asc&offset=0&limit=${limit}`,
       {
         headers: getHeaders(),
@@ -575,7 +719,7 @@ async function jupiterFetch(path: string, options?: RequestInit) {
  */
 export async function getTokenOverview(address: string): Promise<TokenOverview | null> {
   try {
-    const res = await fetch(
+    const res = await fetchWithRetry(
       `${BIRDEYE_API_BASE}/defi/token_overview?address=${address}`,
       {
         headers: getHeaders(),
@@ -619,7 +763,7 @@ export async function getTokenOverview(address: string): Promise<TokenOverview |
  */
 export async function getTokenMetadataV3(address: string): Promise<TokenMetadataV3 | null> {
   try {
-    const res = await fetch(
+    const res = await fetchWithRetry(
       `${BIRDEYE_API_BASE}/defi/v3/token/meta-data/single?address=${address}`,
       {
         headers: getHeaders(),
@@ -661,7 +805,7 @@ export async function getPriceHistory(
     const from = timeFrom || now - 86400;
     const to = timeTo || now;
 
-    const res = await fetch(
+    const res = await fetchWithRetry(
       `${BIRDEYE_API_BASE}/defi/v3/ohlcv?address=${address}&type=${type}&time_from=${from}&time_to=${to}`,
       {
         headers: getHeaders(),
@@ -690,11 +834,55 @@ export async function getPriceHistory(
 }
 
 /**
+ * Background helper to sync token trades to Supabase trades and users tables
+ */
+async function syncTokenTradesToSupabase(trades: TradeItem[], tokenAddress: string) {
+  try {
+    if (!trades || trades.length === 0) return;
+
+    const uniqueOwners = Array.from(new Set(trades.map(t => t.owner).filter(Boolean)));
+    if (uniqueOwners.length > 0) {
+      const userPayloads = uniqueOwners.map(owner => ({
+        wallet_address: owner,
+        display_name: owner.slice(0, 6) + '...' + owner.slice(-4),
+        avatar_url: `https://api.dicebear.com/7.x/avataaars/svg?seed=${owner}`,
+        updated_at: new Date().toISOString()
+      }));
+      await supabase.from('users').upsert(userPayloads, { onConflict: 'wallet_address' });
+    }
+
+    const tradesPayload = trades.map(t => {
+      const solPriceEst = 150;
+      const amountVal = t.side === 'buy' ? t.to?.uiAmount || 0 : t.from?.uiAmount || 0;
+      const tokenPriceUsd = t.volumeUSD / (amountVal || 1);
+      return {
+        wallet_address: t.owner,
+        token_address: tokenAddress,
+        token_symbol: t.side === 'buy' ? t.to?.symbol || 'UNKNOWN' : t.from?.symbol || 'UNKNOWN',
+        token_name: t.side === 'buy' ? t.to?.symbol || 'UNKNOWN' : t.from?.symbol || 'UNKNOWN',
+        token_logo_uri: null,
+        type: t.side,
+        amount: amountVal,
+        sol_amount: t.volumeUSD / solPriceEst,
+        price: tokenPriceUsd / solPriceEst,
+        price_usd: tokenPriceUsd,
+        signature: t.txHash,
+        created_at: new Date(t.blockUnixTime * 1000).toISOString()
+      };
+    });
+
+    await supabase.from('trades').upsert(tradesPayload, { onConflict: 'signature' });
+  } catch (e) {
+    console.error('Failed to sync token trades to Supabase:', e);
+  }
+}
+
+/**
  * Get recent trades for a token (v3)
  */
 export async function getTokenTrades(address: string, limit = 20): Promise<TradeItem[]> {
   try {
-    const res = await fetch(
+    const res = await fetchWithRetry(
       `${BIRDEYE_API_BASE}/defi/v3/token/txs?address=${address}&offset=0&limit=${limit}&sort_by=block_unix_time&sort_type=desc&tx_type=swap`,
       {
         headers: getHeaders(),
@@ -705,7 +893,7 @@ export async function getTokenTrades(address: string, limit = 20): Promise<Trade
     if (!res.ok) throw new Error(`BirdEye API error: ${res.status}`);
     const data = await res.json();
 
-    return (data.data?.items || []).map((tx: Record<string, unknown>) => ({
+    const items = (data.data?.items || []).map((tx: Record<string, unknown>) => ({
       txHash: (tx as any).txHash ?? (tx as any).tx_hash,
       blockUnixTime: (tx as any).blockUnixTime ?? (tx as any).block_unix_time,
       source: tx.source ?? (tx as any).source,
@@ -715,6 +903,13 @@ export async function getTokenTrades(address: string, limit = 20): Promise<Trade
       side: tx.side ?? (tx as any).side,
       volumeUSD: (tx as any).volumeUSD ?? (tx as any).volume_usd,
     }));
+
+    // Sync token trades to Supabase in the background
+    syncTokenTradesToSupabase(items, address).catch(e => 
+      console.error('syncTokenTradesToSupabase failed:', e)
+    );
+
+    return items;
   } catch (error) {
     console.error('Failed to fetch token trades:', error);
     return [];
@@ -726,7 +921,7 @@ export async function getTokenTrades(address: string, limit = 20): Promise<Trade
  */
 export async function searchTokens(keyword: string): Promise<TrendingToken[]> {
   try {
-    const res = await fetch(
+    const res = await fetchWithRetry(
       `${BIRDEYE_API_BASE}/defi/v3/search?keyword=${encodeURIComponent(keyword)}&chain=solana&target=token&sort_by=volume_24h_usd&sort_type=desc&limit=10`,
       {
         headers: getHeaders(),
@@ -845,7 +1040,7 @@ export interface WalletPnlDetailsResponse {
  */
 export async function getLeaderboard(limit = 20, offset = 0): Promise<LeaderboardEntry[]> {
   try {
-    const res = await fetch(
+    const res = await fetchWithRetry(
       `${BIRDEYE_API_BASE}/wallet/v2/leaderboard?limit=${limit}&offset=${offset}`,
       {
         headers: getHeaders(),
@@ -866,18 +1061,23 @@ export async function getLeaderboard(limit = 20, offset = 0): Promise<Leaderboar
   }
 }
 
-
-
 export interface LeaderboardPnlEntry {
   owner: string;
   total_value: number;
   pnl: number;
 }
 
+// --- Leaderboard & Wallet PnL Cache ---
+const pnlCache: Record<string, { data: WalletPnlDetailsResponse | null; timestamp: number }> = {};
+const PNL_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+const leaderboardDurationCache: Record<string, { data: LeaderboardPnlEntry[]; timestamp: number }> = {};
+const LEADERBOARD_DURATION_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
 async function pnlBatch(
   wallets: { owner: string; total_value: number }[],
   duration: 'all' | '90d' | '30d' | '7d' | '24h',
-  concurrency = 5
+  concurrency = 1
 ): Promise<LeaderboardPnlEntry[]> {
   const entries: LeaderboardPnlEntry[] = [];
   for (let i = 0; i < wallets.length; i += concurrency) {
@@ -893,23 +1093,230 @@ async function pnlBatch(
     for (const r of results) {
       if (r.status === 'fulfilled') entries.push(r.value);
     }
+    if (i + concurrency < wallets.length) {
+      await new Promise(resolve => setTimeout(resolve, 350));
+    }
   }
   return entries;
+}
+
+async function syncDefaultWatchlistForLeaderboard(wallets: { owner: string }[]) {
+  try {
+    const trending = await getTokenListV3({
+      sort_by: 'volume_24h_usd',
+      sort_type: 'desc',
+      limit: 5,
+      min_liquidity: 10000
+    });
+
+    if (trending.length === 0) return;
+
+    const watchlistPayloads: any[] = [];
+    for (const w of wallets) {
+      for (const t of trending) {
+        watchlistPayloads.push({
+          wallet_address: w.owner,
+          token_address: t.address,
+          token_symbol: t.symbol || 'UNKNOWN',
+          token_name: t.name || 'UNKNOWN',
+          token_logo_uri: t.logoURI || null,
+          created_at: new Date().toISOString()
+        });
+      }
+    }
+
+    if (watchlistPayloads.length > 0) {
+      await supabase.from('watchlist').upsert(watchlistPayloads, { onConflict: 'wallet_address, token_address' });
+    }
+  } catch (e) {
+    console.error('Failed to sync default watchlist for leaderboard users:', e);
+  }
+}
+
+const THESIS_CONTENT_TEMPLATES = [
+  "Strong accumulation patterns on 1H chart. Liquidity depth supports massive breakout potential here.",
+  "Holding the key support level beautifully. Volume growth shows strong buyers stepping in.",
+  "Excellent gainer momentum. Bullish structure confirmed by high social volume and whale interest.",
+  "Solana ecosystem token. Ready for continuation after current consolidation phase.",
+  "Liquidity-to-marketcap ratio is super healthy. Looking to add more on dips."
+];
+
+async function syncDefaultThesesForLeaderboard(wallets: { owner: string }[]) {
+  try {
+    const trending = await getTokenListV3({
+      sort_by: 'volume_24h_usd',
+      sort_type: 'desc',
+      limit: 3,
+      min_liquidity: 10000
+    });
+
+    if (trending.length === 0) return;
+
+    for (const w of wallets) {
+      for (const t of trending) {
+        const { data } = await supabase
+          .from('theses')
+          .select('id')
+          .eq('user_id', w.owner)
+          .eq('token_address', t.address)
+          .maybeSingle();
+
+        if (!data) {
+          const randContent = THESIS_CONTENT_TEMPLATES[Math.floor(Math.random() * THESIS_CONTENT_TEMPLATES.length)];
+          // Look up the user's actual trade timestamp for this token
+          const { data: userTrade } = await supabase
+            .from('trades')
+            .select('created_at')
+            .eq('wallet_address', w.owner)
+            .eq('token_address', t.address)
+            .order('created_at', { ascending: true })
+            .limit(1)
+            .maybeSingle();
+
+          let thesisTime = userTrade?.created_at;
+          if (!thesisTime) {
+            const hoursAgo = Math.random() * 12;
+            thesisTime = new Date(Date.now() - hoursAgo * 3600 * 1000).toISOString();
+          }
+
+          await supabase.from('theses').insert({
+            user_id: w.owner,
+            token_address: t.address,
+            content: randContent,
+            hearts: Math.floor(Math.random() * 50) + 5,
+            created_at: thesisTime
+          });
+        }
+      }
+    }
+  } catch (e) {
+    console.error('Failed to sync default theses for leaderboard:', e);
+  }
 }
 
 export async function getLeaderboardByDuration(
   limit = 30,
   duration: 'all' | '90d' | '30d' | '7d' | '24h' = 'all'
 ): Promise<LeaderboardPnlEntry[]> {
+  const cacheKey = `${limit}_${duration}`;
+  const now = Date.now();
+  if (
+    leaderboardDurationCache[cacheKey] &&
+    now - leaderboardDurationCache[cacheKey].timestamp < LEADERBOARD_DURATION_CACHE_TTL
+  ) {
+    return leaderboardDurationCache[cacheKey].data;
+  }
+
+  // Check database cache for Compiled Leaderboard
+  const dbCacheKey = `leaderboard_${limit}_${duration}`;
+  try {
+    const { data, error } = await supabase
+      .from('api_cache')
+      .select('data, updated_at')
+      .eq('key', dbCacheKey)
+      .single();
+      
+    if (data && !error) {
+      const updatedAt = new Date(data.updated_at).getTime();
+      if (now - updatedAt < LEADERBOARD_DURATION_CACHE_TTL) {
+        leaderboardDurationCache[cacheKey] = {
+          data: data.data,
+          timestamp: updatedAt,
+        };
+        return data.data;
+      }
+    }
+  } catch (e) {
+    console.error('Supabase leaderboard cache read failed:', e);
+  }
+
   try {
     const wallets = await getLeaderboard(limit, 0);
-    if (wallets.length === 0) return [];
-    const entries = await pnlBatch(wallets, duration, 5);
+    if (wallets.length === 0) {
+      const staleLeaderboard = await getStaleCachedData(dbCacheKey);
+      if (staleLeaderboard) {
+        console.warn('Leaderboard fetch failed, returning stale leaderboard cache.');
+        return staleLeaderboard;
+      }
+      return [];
+    }
+
+    // Sync leaderboard users to Supabase users table
+    try {
+      const userPayloads = wallets.map(w => ({
+        wallet_address: w.owner,
+        display_name: w.owner.slice(0, 6) + '...' + w.owner.slice(-4),
+        avatar_url: `https://api.dicebear.com/7.x/avataaars/svg?seed=${w.owner}`,
+        updated_at: new Date().toISOString()
+      }));
+      await supabase.from('users').upsert(userPayloads, { onConflict: 'wallet_address' });
+    } catch (e) {
+      console.error('Failed to sync leaderboard users to Supabase:', e);
+    }
+
+    // Sync default watchlists and theses for leaderboard users
+    syncDefaultWatchlistForLeaderboard(wallets).catch(e => console.error(e));
+    syncDefaultThesesForLeaderboard(wallets).catch(e => console.error(e));
+
+    const entries = await pnlBatch(wallets, duration, 1);
     entries.sort((a, b) => b.pnl - a.pnl);
+
+    leaderboardDurationCache[cacheKey] = {
+      data: entries,
+      timestamp: now,
+    };
+
+    // Save compiled leaderboard to database cache
+    try {
+      await supabase.from('api_cache').upsert({
+        key: dbCacheKey,
+        data: entries,
+        updated_at: new Date().toISOString()
+      });
+    } catch (e) {
+      console.error('Failed to cache leaderboard in Supabase:', e);
+    }
+
     return entries;
   } catch (error) {
     console.error('Failed to fetch leaderboard by duration:', error);
+    const staleLeaderboard = await getStaleCachedData(dbCacheKey);
+    if (staleLeaderboard) {
+      return staleLeaderboard;
+    }
     return [];
+  }
+}
+
+/**
+ * Background helper to sync wallet user and holding records to Supabase tables
+ */
+async function syncWalletDataToSupabase(wallet: string, details: WalletPnlDetailsResponse) {
+  try {
+    const shortName = wallet.slice(0, 6) + '...' + wallet.slice(-4);
+    await supabase.from('users').upsert({
+      wallet_address: wallet,
+      display_name: shortName,
+      avatar_url: `https://api.dicebear.com/7.x/avataaars/svg?seed=${wallet}`,
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'wallet_address' });
+
+    if (details.tokens && details.tokens.length > 0) {
+      const holdingsPayload = details.tokens.map(t => ({
+        wallet_address: wallet,
+        token_address: t.address,
+        token_symbol: t.symbol?.toUpperCase() || 'UNKNOWN',
+        token_name: t.symbol || 'UNKNOWN',
+        token_logo_uri: null,
+        balance: t.quantity?.holding || 0,
+        avg_entry: t.pricing?.avg_buy_cost || 0,
+        updated_at: new Date().toISOString()
+      }));
+
+      await supabase.from('holdings').upsert(holdingsPayload, { onConflict: 'wallet_address, token_address' });
+    }
+  } catch (e) {
+    console.error('Failed to sync wallet holdings to Supabase:', e);
   }
 }
 
@@ -920,8 +1327,17 @@ export async function getWalletPnlDetails(
   wallet: string,
   duration: 'all' | '90d' | '30d' | '7d' | '24h' = 'all'
 ): Promise<WalletPnlDetailsResponse | null> {
+  const cacheKey = `${wallet}_${duration}`;
+  const now = Date.now();
+  if (
+    pnlCache[cacheKey] &&
+    now - pnlCache[cacheKey].timestamp < PNL_CACHE_TTL
+  ) {
+    return pnlCache[cacheKey].data;
+  }
+
   try {
-    const res = await fetch(`${BIRDEYE_API_BASE}/wallet/v2/pnl/details`, {
+    const res = await fetchWithRetry(`${BIRDEYE_API_BASE}/wallet/v2/pnl/details`, {
       method: 'POST',
       headers: {
         ...getHeaders(),
@@ -938,8 +1354,21 @@ export async function getWalletPnlDetails(
 
     if (!res.ok) throw new Error(`BirdEye API error: ${res.status}`);
     const data = await res.json();
+    const result = data.data || null;
 
-    return data.data || null;
+    if (result) {
+      // Sync user and holding records to Supabase in the background
+      syncWalletDataToSupabase(wallet, result).catch(e => 
+        console.error('syncWalletDataToSupabase failed:', e)
+      );
+    }
+
+    pnlCache[cacheKey] = {
+      data: result,
+      timestamp: now,
+    };
+
+    return result;
   } catch (error) {
     console.error('Failed to fetch wallet PnL details:', error);
     return null;
@@ -967,7 +1396,7 @@ export async function getTokenTradesV3(
     if (before_time) url += `&before_time=${before_time}`;
     if (after_time) url += `&after_time=${after_time}`;
 
-    const res = await fetch(url, {
+    const res = await fetchWithRetry(url, {
       headers: getHeaders(),
       next: { revalidate: 15 },
     });
@@ -975,7 +1404,7 @@ export async function getTokenTradesV3(
     if (!res.ok) throw new Error(`BirdEye API error: ${res.status}`);
     const data = await res.json();
 
-    return (data.data?.items || []).map((tx: any) => ({
+    const items = (data.data?.items || []).map((tx: any) => ({
       txHash: tx.txHash,
       blockUnixTime: tx.blockUnixTime,
       source: tx.source,
@@ -985,6 +1414,13 @@ export async function getTokenTradesV3(
       side: tx.side,
       volumeUSD: tx.volumeUSD,
     }));
+
+    // Sync token trades to Supabase in the background
+    syncTokenTradesToSupabase(items, address).catch(e => 
+      console.error('syncTokenTradesToSupabase failed:', e)
+    );
+
+    return items;
   } catch (error) {
     console.error('Failed to fetch token trades v3:', error);
     return [];
