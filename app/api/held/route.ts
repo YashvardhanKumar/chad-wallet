@@ -1,4 +1,4 @@
-import { getOverallTrendingTokens, isTokenVerified } from '@/app/lib/birdeye';
+import { getMostHeldTokens, isTokenVerified } from '@/app/lib/birdeye';
 import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
@@ -7,7 +7,7 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const limit = parseInt(searchParams.get('limit') || '50');
 
-  const tokens = await getOverallTrendingTokens(limit);
+  const tokens = await getMostHeldTokens(limit);
   
   const mapped = await Promise.all(tokens.map(async (t) => ({
     change5m: t.priceChange5m?.toString() || "0",
@@ -18,7 +18,7 @@ export async function GET(request: Request) {
     priceUSD: t.price?.toString() || "0",
     volume24h: t.volume24h?.toString() || "0",
     age: t.age || "",
-    isVerified: t.isVerified ?? await isTokenVerified(t.address),
+    isVerified: await isTokenVerified(t.address),
     token: {
       address: t.address,
       symbol: t.symbol,

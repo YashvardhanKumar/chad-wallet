@@ -1,21 +1,17 @@
-import { getLeaderboard, getWalletPnlDetails } from '@/app/lib/birdeye';
+import { getLeaderboardByDuration, getWalletPnlDetails } from '@/app/lib/birdeye';
 import { NextResponse } from 'next/server';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const limit = parseInt(searchParams.get('limit') || '50');
-  const offset = parseInt(searchParams.get('offset') || '0');
   const wallet = searchParams.get('wallet');
-  const duration = searchParams.get('duration') || 'all';
+  const duration = (searchParams.get('duration') || '24h') as 'all' | '90d' | '30d' | '7d' | '24h';
 
   if (wallet) {
-    const pnlDetails = await getWalletPnlDetails(
-      wallet,
-      duration as 'all' | '90d' | '30d' | '7d' | '24h'
-    );
+    const pnlDetails = await getWalletPnlDetails(wallet, duration);
     return NextResponse.json({ pnl: pnlDetails });
   }
 
-  const entries = await getLeaderboard(limit, offset);
+  const entries = await getLeaderboardByDuration(limit, duration);
   return NextResponse.json({ entries });
 }
